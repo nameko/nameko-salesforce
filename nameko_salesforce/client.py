@@ -1,7 +1,8 @@
 import logging
 
 from nameko.exceptions import ConfigurationError
-from nameko_bayeux_client.client import BayeuxClient
+from nameko_bayeux_client.client import BayeuxClient, BayeuxMessageHandler
+import redis
 from simple_salesforce.login import SalesforceLogin
 
 from nameko_salesforce import constants
@@ -59,6 +60,18 @@ class SalesForceBayeuxClient(BayeuxClient):
         """ Access token for the session obtained upon login
         """
 
+        self.replay_enabled = False
+        """
+        """
+
+        self.replay_storage = None
+        """
+        """
+
+        self.replay_storage_ttl = constants.DEFAULT_REPLAY_STORAGE_TTL
+        """
+        """
+
     def setup(self):
 
         try:
@@ -79,12 +92,26 @@ class SalesForceBayeuxClient(BayeuxClient):
             self.sandbox = config['SANDBOX']
         except KeyError as exc:
             raise ConfigurationError(
-                "`{}` configuration does not contain mandatory "
-                "`{}` key".format(constants.CONFIG_KEY, exc.args[0])
+                '`{}` configuration does not contain mandatory '
+                '`{}` key'.format(constants.CONFIG_KEY, exc.args[0])
             ) from exc
 
-        self.server_uri = None  # will be filled on login
-        self.access_token = None  # will be filled on login
+        self.replay_enabled = config.get('PUSHTOPIC_REPLAY_ENABLED', False)
+        if self.replay_enabled:
+            self._setup_replay_storage(config)
+
+    def _setup_replay_storage(self, config):
+        try:
+            redis_uri = config['PUSHTOPIC_REPLAY_REDIS_URI']
+        except KeyError:
+            raise ConfigurationError(
+                '`{}` must have `PUSHTOPIC_REPLAY_REDIS_URI` defined if '
+                '`PUSHTOPIC_REPLAY_ENABLED` is set to `True`'
+                .format(constants.CONFIG_KEY)
+            )
+        self.replay_storage = redis.StrictRedis.from_url(redis_uri)
+        self.replay_storage_ttl = config.get(
+            'PUSHTOPIC_REPLAY_TTL', self.replay_storage_ttl)
 
     def login(self):
 
@@ -108,3 +135,10 @@ class SalesForceBayeuxClient(BayeuxClient):
     def get_authorisation(self):
         return 'Bearer', self.access_token
 
+
+
+class SalesforceMessageHandler(BayeuxMessageHandler):
+    pass
+
+
+subscribe = SalesforceMessageHandler.decorator

@@ -39,6 +39,10 @@ class TestSalesForceBayeuxClient:
             yield login
 
     @pytest.fixture
+    def redis_uri(self):
+        return 'redis://localhost:6379/11'
+
+    @pytest.fixture
     def container(self, config):
         container = collections.namedtuple('container', ('config',))
         container.config = config
@@ -79,11 +83,13 @@ class TestSalesForceBayeuxClient:
             ('version', 'BAYEUX_VERSION', '1.0'),
             ('minimum_version', 'BAYEUX_MINIMUM_VERSION', '1.0'),
             ('api_version', 'API_VERSION', '37.0'),
+            ('replay_enabled', 'PUSHTOPIC_REPLAY_ENABLED', False),
+            ('replay_storage_ttl', 'PUSHTOPIC_REPLAY_TTL', 60 * 60 * 12),
         ),
     )
     def test_setup_defaults(self, attr, key, expected_default, container):
 
-        container.config[constants.CONFIG_KEY].pop(key)
+        container.config[constants.CONFIG_KEY].pop(key, None)
 
         client = SalesForceBayeuxClient()
         client.container = container
@@ -108,6 +114,31 @@ class TestSalesForceBayeuxClient:
             '`{}` configuration does not contain mandatory `{}` key'
             .format(constants.CONFIG_KEY, key))
         assert str(exc.value) == expected_error
+
+    def test_setup_replay_enabled(self, container, redis_uri):
+
+        config = container.config[constants.CONFIG_KEY]
+        config['PUSHTOPIC_REPLAY_ENABLED'] = True
+
+        client = SalesForceBayeuxClient()
+        client.container = container
+
+        with pytest.raises(ConfigurationError) as exc:
+            client.setup()
+
+        expected_error = (
+            '`{}` must have `PUSHTOPIC_REPLAY_REDIS_URI` defined if '
+            '`PUSHTOPIC_REPLAY_ENABLED` is set to `True`'
+            .format(constants.CONFIG_KEY))
+        assert str(exc.value) == expected_error
+
+        config['PUSHTOPIC_REPLAY_REDIS_URI'] = redis_uri
+        config['PUSHTOPIC_REPLAY_TTL'] = 3600
+
+        client.setup()
+
+        assert client.replay_enabled == True
+        assert client.replay_storage_ttl == 3600
 
     def test_login(self, access_token, client, config, login):
 
