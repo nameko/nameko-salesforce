@@ -20,6 +20,7 @@ class TestSalesForceBayeuxClient:
             'PASSWORD': 'Balboa',
             'SECURITY_TOKEN': 'ABCD1234',
             'SANDBOX': False,
+            'API_VERSION': '37.0',
         }
         return config
 
@@ -40,6 +41,7 @@ class TestSalesForceBayeuxClient:
         assert client.version == config['SALESFORCE']['BAYEUX_VERSION']
         assert client.minimum_version == (
             config['SALESFORCE']['BAYEUX_MINIMUM_VERSION'])
+        assert client.api_version == config['SALESFORCE']['API_VERSION']
         assert client.username == config['SALESFORCE']['USERNAME']
         assert client.password == config['SALESFORCE']['PASSWORD']
         assert client.security_token == config['SALESFORCE']['SECURITY_TOKEN']
@@ -58,6 +60,24 @@ class TestSalesForceBayeuxClient:
         assert str(exc.value) == '`SALESFORCE` config key not found'
 
     @pytest.mark.parametrize(
+        ('attr', 'key', 'expected_default'),
+        (
+            ('version', 'BAYEUX_VERSION', '1.0'),
+            ('minimum_version', 'BAYEUX_MINIMUM_VERSION', '1.0'),
+            ('api_version', 'API_VERSION', '37.0'),
+        ),
+    )
+    def test_setup_defaults(self, attr, key, expected_default, container):
+
+        container.config[constants.CONFIG_KEY].pop(key)
+
+        client = SalesForceBayeuxClient()
+        client.container = container
+        client.setup()
+
+        assert getattr(client, attr) == expected_default
+
+    @pytest.mark.parametrize(
         'key', ('USERNAME', 'PASSWORD', 'SECURITY_TOKEN', 'SANDBOX')
     )
     def test_setup_main_config_key_failures(self, container, key):
@@ -74,4 +94,3 @@ class TestSalesForceBayeuxClient:
             '`{}` configuration does not contain mandatory `{}` key'
             .format(constants.CONFIG_KEY, key))
         assert str(exc.value) == expected_error
-
