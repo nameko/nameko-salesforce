@@ -1,7 +1,13 @@
+import logging
+
 from nameko.exceptions import ConfigurationError
 from nameko_bayeux_client.client import BayeuxClient
+from simple_salesforce.login import SalesforceLogin
 
 from nameko_salesforce import constants
+
+
+logger = logging.getLogger(__name__)
 
 
 class SalesForceBayeuxClient(BayeuxClient):
@@ -38,7 +44,7 @@ class SalesForceBayeuxClient(BayeuxClient):
         self.security_token = None
         """ Salesforce SOAP Authentication Security Token
 
-        The underlying Simplesalesforce uses ...
+        The underlying Simplesalesforce uses TODO describe ...
         """
 
         self.sandbox = None
@@ -79,3 +85,26 @@ class SalesForceBayeuxClient(BayeuxClient):
 
         self.server_uri = None  # will be filled on login
         self.access_token = None  # will be filled on login
+
+    def login(self):
+
+        config = self.container.config['SALESFORCE']
+
+        access_token, host = SalesforceLogin(
+            session=None,
+            username=self.username,
+            password=self.password,
+            security_token=self.security_token,
+            sandbox=self.sandbox,
+            sf_version=self.api_version,
+        )
+
+        self.access_token = access_token
+
+        self.server_uri = 'https://{}/cometd/{}'.format(host, self.api_version)
+
+        logger.info('Logged in to salesforce as %s', config['USERNAME'])
+
+    def get_authorisation(self):
+        return 'Bearer', self.access_token
+

@@ -1,6 +1,6 @@
 import collections
 
-from mock import Mock
+from mock import call, Mock, patch
 from nameko.exceptions import ConfigurationError
 import pytest
 
@@ -23,6 +23,20 @@ class TestSalesForceBayeuxClient:
             'API_VERSION': '37.0',
         }
         return config
+
+    @pytest.fixture
+    def access_token(self):
+        return '*********'
+
+    @pytest.fixture
+    def server_host(self):
+        return 'some.salesforce.server'
+
+    @pytest.fixture
+    def login(self, access_token, server_host):
+        with patch('nameko_salesforce.client.SalesforceLogin') as login:
+            login.return_value = (access_token, server_host)
+            yield login
 
     @pytest.fixture
     def container(self, config):
@@ -94,3 +108,28 @@ class TestSalesForceBayeuxClient:
             '`{}` configuration does not contain mandatory `{}` key'
             .format(constants.CONFIG_KEY, key))
         assert str(exc.value) == expected_error
+
+    def test_login(self, access_token, client, config, login):
+
+        client.login()
+
+        assert access_token == client.access_token
+        assert (
+            'https://some.salesforce.server/cometd/37.0' ==
+            client.server_uri
+        )
+        assert (
+            login.call_args ==
+            call(
+                session=None,
+                username=client.username,
+                password=client.password,
+                security_token=client.security_token,
+                sandbox=client.sandbox,
+                sf_version=client.api_version,
+            )
+        )
+
+    def test_get_authorisation(self, client, access_token):
+        client.access_token = access_token
+        assert ('Bearer', access_token) == client.get_authorisation()
