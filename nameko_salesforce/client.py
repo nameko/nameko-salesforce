@@ -61,15 +61,29 @@ class SalesForceBayeuxClient(BayeuxClient):
         """
 
         self.replay_enabled = False
-        """
+        """ PushTopic Events tracking enabled
+
+        If set to ``True``, the client will persist last event Reply ID for each
+        channel and use it when subscribing to immediately receive events missed
+        during the retention window.
+
         """
 
         self.replay_storage = None
         """
+        Redis client instance for persisting PushTopic Replay IDs
+
+        Initialized only if ``replay_enabled`` is set.
+
         """
 
         self.replay_storage_ttl = constants.DEFAULT_REPLAY_STORAGE_TTL
         """
+        Time to live for persisted PushTopic Reply IDs
+
+        Salesforce promises to keep events for 24 hours, therefore the TTL
+        value must not exceed it.
+
         """
 
     def setup(self):
