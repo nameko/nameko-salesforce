@@ -268,3 +268,107 @@ class TestSalesForceBayeuxClientReplayStorage:
             },
         ]
         assert send_and_handle.call_args == call(expected_subscriptions)
+
+
+class TestSalesforceMessageHandler:
+    """ Unit test the `subscribe` entrypoint handler
+
+    Unit tests for `TestSalesforceMessageHandler`.
+    """
+
+    @pytest.fixture
+    def channel_name(self):
+        return '/topic/InvoiceStatementUpdates'
+
+    @pytest.fixture
+    def handler(self, channel_name):
+        with patch.object(SalesForceBayeuxClient, 'set_replay_id'):
+            handler = SalesforceMessageHandler(channel_name)
+            handler.container = Mock()
+            handler.client.replay_storage = Mock()
+            yield handler
+
+    def test_handle_message(self, handler, channel_name):
+        """ Test that handle_message parses and passes the reply_id
+        """
+
+        replay_id = '001122'
+        message = {'sobject': 'spam', 'event': {'replayId': replay_id}}
+
+        handler.handle_message(message)
+
+        call_args, call_kwargs = handler.container.spawn_worker.call_args
+        assert call_args == (handler, (channel_name, message), {})
+        assert call_kwargs['context_data'] == {}
+        assert call_kwargs['handle_result'].func == handler.handle_result
+        assert call_kwargs['handle_result'].args == (replay_id,)
+
+    def test_handle_result_success_replay_disabled(self, handler):
+        """ Test that handle_result doesn't set the replay ID
+
+        ... if the mechanism is disabled
+        """
+
+        handler.client.replay_enabled = False
+
+        replay_id = '001122'
+        worker_ctx, result = Mock(), Mock()
+        exc_info = None
+
+        assert (
+            handler.handle_result(replay_id, worker_ctx, result, exc_info) ==
+            (result, exc_info))
+        assert handler.client.set_replay_id.call_count == 0
+
+    def test_handle_result_success_replay_enabled(self, handler):
+        """ Test that handle_result sets the replay ID
+
+        ... if the mechanism is enabled
+        """
+
+        handler.client.replay_enabled = True
+
+        replay_id = '001122'
+        worker_ctx, result = Mock(), Mock()
+        exc_info = None
+
+        assert (
+            handler.handle_result(replay_id, worker_ctx, result, exc_info) ==
+            (result, exc_info))
+        assert (
+            handler.client.set_replay_id.call_args ==
+            call(handler.channel_name, replay_id))
+
+    def test_handle_result_failure_replay_disabled(self, handler):
+        """ Test that handle_result doesn't set the replay ID
+
+        ... if the handling failed
+        """
+
+        handler.client.replay_enabled = False
+
+        replay_id = '001122'
+        worker_ctx, result = Mock(), Mock()
+        exc_info = Mock()  # an exception raised inside the worker
+
+        assert (
+            handler.handle_result(replay_id, worker_ctx, result, exc_info) ==
+            (result, exc_info))
+        assert handler.client.set_replay_id.call_count == 0
+
+    def test_handle_result_failure_replay_enabled(self, handler):
+        """ Test that handle_result doesn't set the replay ID
+
+        ... if the mechanism is enabled but the handling failed
+        """
+
+        handler.client.replay_enabled = True
+
+        replay_id = '001122'
+        worker_ctx, result = Mock(), Mock()
+        exc_info = Mock()  # an exception raised inside the worker
+
+        assert (
+            handler.handle_result(replay_id, worker_ctx, result, exc_info) ==
+            (result, exc_info))
+        assert handler.client.set_replay_id.call_count == 0

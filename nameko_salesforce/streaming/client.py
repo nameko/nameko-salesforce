@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 
 from nameko.exceptions import ConfigurationError
@@ -180,7 +181,24 @@ class SalesForceBayeuxClient(BayeuxClient):
 
 
 class SalesforceMessageHandler(BayeuxMessageHandler):
-    pass
+
+    client = SalesForceBayeuxClient()
+
+    def handle_message(self, message):
+        args = (self.channel_name, message)
+        kwargs = {}
+        context_data = {}
+
+        replay_id = message['event']['replayId']
+
+        self.container.spawn_worker(
+            self, args, kwargs, context_data=context_data,
+            handle_result=partial(self.handle_result, replay_id))
+
+    def handle_result(self, replay_id, worker_ctx, result, exc_info):
+        if not exc_info and self.client.replay_enabled:
+            self.client.set_replay_id(self.channel_name, replay_id)
+        return result, exc_info
 
 
 subscribe = SalesforceMessageHandler.decorator
