@@ -51,40 +51,11 @@ def redis_client(redis_uri):
 	client.flushdb()
 
 
-class TestSalesForceBayeuxClient:
+class TestSalesForceBayeuxClientSetup:
+    """ Unit tests client setup
 
-    @pytest.fixture
-    def access_token(self):
-        return '*********'
-
-    @pytest.fixture
-    def server_host(self):
-        return 'some.salesforce.server'
-
-    @pytest.fixture
-    def login(self, access_token, server_host):
-        with patch(
-            'nameko_salesforce.streaming.client.SalesforceLogin'
-        ) as login:
-            login.return_value = (access_token, server_host)
-            yield login
-
-    @pytest.fixture
-    def redis_uri(self):
-        return 'redis://localhost:6379/11'
-
-    @pytest.fixture
-    def container(self, config):
-        container = collections.namedtuple('container', ('config',))
-        container.config = config
-        return container
-
-    @pytest.fixture
-    def client(self, container):
-        client = SalesForceBayeuxClient()
-        client.container = container
-        client.setup()
-        return client
+    Unit tests for setup related parts of `SalesForceBayeuxClient`.
+    """
 
     def test_setup(self, client, config):
         assert client.version == config['SALESFORCE']['BAYEUX_VERSION']
@@ -171,6 +142,29 @@ class TestSalesForceBayeuxClient:
         assert client.replay_enabled == True
         assert client.replay_storage_ttl == 3600
 
+
+class TestSalesForceBayeuxClientAuthentication:
+    """ Unit test client authentication
+
+    Unit tests for authentication related parts of `SalesForceBayeuxClient`.
+    """
+
+    @pytest.fixture
+    def access_token(self):
+        return '*********'
+
+    @pytest.fixture
+    def server_host(self):
+        return 'some.salesforce.server'
+
+    @pytest.fixture
+    def login(self, access_token, server_host):
+        with patch(
+            'nameko_salesforce.streaming.client.SalesforceLogin'
+        ) as login:
+            login.return_value = (access_token, server_host)
+            yield login
+
     def test_login(self, access_token, client, config, login):
 
         client.login()
@@ -198,6 +192,10 @@ class TestSalesForceBayeuxClient:
 
 
 class TestSalesForceBayeuxClientReplayStorage:
+    """ Unit test the Replay ID storage extension
+
+    Unit tests for Reply ID related parts of `SalesForceBayeuxClient`.
+    """
 
     @pytest.fixture
     def config(self, config, redis_uri):
@@ -232,3 +230,36 @@ class TestSalesForceBayeuxClientReplayStorage:
         assert 11 == client.get_replay_id(channel_name)
 
 
+    @patch.object(SalesForceBayeuxClient, 'send_and_handle')
+    def test_subscribe(self, send_and_handle, client, redis_client):
+
+        client._subscriptions = ['/topic/spam', '/topic/egg', '/topic/ham']
+        client.client_id = Mock()
+
+        replay_id = 11
+        redis_client.set('salesforce:replay_id:/topic/egg', replay_id)
+
+        client.subscribe()
+
+        expected_subscriptions = [
+            {
+                'id': 1,
+                'clientId': client.client_id,
+                'channel': '/meta/subscribe',
+                'subscription': '/topic/spam',
+            },
+            {
+                'id': 2,
+                'clientId': client.client_id,
+                'channel': '/meta/subscribe',
+                'subscription': '/topic/egg',
+                'ext': {'replay': {'/topic/egg': 11}},  # replay extension
+            },
+            {
+                'id': 3,
+                'clientId': client.client_id,
+                'channel': '/meta/subscribe',
+                'subscription': '/topic/ham',
+            },
+        ]
+        assert call(expected_subscriptions) == send_and_handle.call_args

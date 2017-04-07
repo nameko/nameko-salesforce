@@ -6,6 +6,7 @@ import redis
 from simple_salesforce.login import SalesforceLogin
 
 from nameko_salesforce import constants
+from nameko_salesforce.streaming import channels
 
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,17 @@ class SalesForceBayeuxClient(BayeuxClient):
         self.server_uri = 'https://{}/cometd/{}'.format(host, self.api_version)
 
         logger.info('Logged in to salesforce as %s', config['USERNAME'])
+
+    def subscribe(self):
+        channel = channels.Subscribe(self)
+        subscriptions = []
+        for channel_name in self._subscriptions:
+            if self.replay_enabled:
+                replay_id = self.get_replay_id(channel_name)
+            else:
+                replay_id = None
+            subscriptions.append(channel.compose(channel_name, replay_id))
+        self.send_and_handle(subscriptions)
 
     def get_authorisation(self):
         return 'Bearer', self.access_token
