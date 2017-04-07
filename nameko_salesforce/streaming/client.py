@@ -149,6 +149,22 @@ class SalesForceBayeuxClient(BayeuxClient):
     def get_authorisation(self):
         return 'Bearer', self.access_token
 
+    def _format_replay_key(self, channel_name):
+        return 'salesforce:replay_id:{}'.format(channel_name)
+
+    def get_replay_id(self, channel_name):
+        replay_id = self.replay_storage.get(
+            self._format_replay_key(channel_name))
+        if replay_id:
+            return int(replay_id)
+
+    def set_replay_id(self, channel_name, replay_id):
+        key = self._format_replay_key(channel_name)
+        pipe = self.replay_storage.pipeline()
+        pipe.set(key, replay_id)
+        pipe.expire(key, self.replay_storage_ttl)
+        pipe.execute()
+
 
 
 class SalesforceMessageHandler(BayeuxMessageHandler):

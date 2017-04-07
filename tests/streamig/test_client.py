@@ -3,26 +3,55 @@ import collections
 from mock import call, Mock, patch
 from nameko.exceptions import ConfigurationError
 import pytest
+import redis
 
 from nameko_salesforce import constants
-from nameko_salesforce.client import SalesForceBayeuxClient
+from nameko_salesforce.streaming.client import SalesForceBayeuxClient
+
+
+@pytest.fixture
+def config():
+    config = {}
+    config['SALESFORCE'] = {
+        'BAYEUX_VERSION': '1.0',
+        'BAYEUX_MINIMUM_VERSION': '1.0',
+        'USERNAME': 'Rocky',
+        'PASSWORD': 'Balboa',
+        'SECURITY_TOKEN': 'ABCD1234',
+        'SANDBOX': False,
+        'API_VERSION': '37.0',
+    }
+    return config
+
+
+@pytest.fixture
+def redis_uri():
+	return 'redis://localhost:6379/11'
+
+
+@pytest.fixture
+def container(config):
+	container = collections.namedtuple('container', ('config',))
+	container.config = config
+	return container
+
+
+@pytest.fixture
+def client(container):
+	client = SalesForceBayeuxClient()
+	client.container = container
+	client.setup()
+	return client
+
+
+@pytest.yield_fixture
+def redis_client(redis_uri):
+	client = redis.StrictRedis.from_url(redis_uri)
+	yield client
+	client.flushdb()
 
 
 class TestSalesForceBayeuxClient:
-
-    @pytest.fixture
-    def config(self):
-        config = {}
-        config['SALESFORCE'] = {
-            'BAYEUX_VERSION': '1.0',
-            'BAYEUX_MINIMUM_VERSION': '1.0',
-            'USERNAME': 'Rocky',
-            'PASSWORD': 'Balboa',
-            'SECURITY_TOKEN': 'ABCD1234',
-            'SANDBOX': False,
-            'API_VERSION': '37.0',
-        }
-        return config
 
     @pytest.fixture
     def access_token(self):
@@ -34,7 +63,9 @@ class TestSalesForceBayeuxClient:
 
     @pytest.fixture
     def login(self, access_token, server_host):
-        with patch('nameko_salesforce.client.SalesforceLogin') as login:
+        with patch(
+            'nameko_salesforce.streaming.client.SalesforceLogin'
+        ) as login:
             login.return_value = (access_token, server_host)
             yield login
 
@@ -164,3 +195,40 @@ class TestSalesForceBayeuxClient:
     def test_get_authorisation(self, client, access_token):
         client.access_token = access_token
         assert ('Bearer', access_token) == client.get_authorisation()
+
+
+class TestSalesForceBayeuxClientReplayStorage:
+
+    @pytest.fixture
+    def config(self, config, redis_uri):
+        config['SALESFORCE']['PUSHTOPIC_REPLAY_ENABLED'] = True
+        config['SALESFORCE']['PUSHTOPIC_REPLAY_REDIS_URI'] = redis_uri
+        config['SALESFORCE']['PUSHTOPIC_REPLAY_TTL'] = 1
+        return config
+
+    def test_set_replay_id(self, client, redis_client):
+
+        channel_name = '/topic/number/one'
+
+        client.set_replay_id(channel_name, 11)
+
+        assert 11 == int(
+            redis_client.get('salesforce:replay_id:/topic/number/one'))
+
+        client.set_replay_id(channel_name, 22)
+
+        assert 22 == int(
+            redis_client.get('salesforce:replay_id:/topic/number/one'))
+
+    def test_get_replay_id(self, client, redis_client):
+
+        channel_name = '/topic/number/one'
+
+        assert client.get_replay_id(channel_name) is None
+
+        redis_client.set(
+            'salesforce:replay_id:/topic/number/one', 11)
+
+        assert 11 == client.get_replay_id(channel_name)
+
+
