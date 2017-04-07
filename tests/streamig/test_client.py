@@ -6,7 +6,10 @@ import pytest
 import redis
 
 from nameko_salesforce import constants
-from nameko_salesforce.streaming.client import SalesForceBayeuxClient
+from nameko_salesforce.streaming.client import (
+    SalesForceBayeuxClient,
+    SalesforceMessageHandler,
+)
 
 
 @pytest.fixture
@@ -26,29 +29,29 @@ def config():
 
 @pytest.fixture
 def redis_uri():
-	return 'redis://localhost:6379/11'
+    return 'redis://localhost:6379/11'
 
 
 @pytest.fixture
 def container(config):
-	container = collections.namedtuple('container', ('config',))
-	container.config = config
-	return container
+    container = collections.namedtuple('container', ('config',))
+    container.config = config
+    return container
 
 
 @pytest.fixture
 def client(container):
-	client = SalesForceBayeuxClient()
-	client.container = container
-	client.setup()
-	return client
+    client = SalesForceBayeuxClient()
+    client.container = container
+    client.setup()
+    return client
 
 
 @pytest.yield_fixture
 def redis_client(redis_uri):
-	client = redis.StrictRedis.from_url(redis_uri)
-	yield client
-	client.flushdb()
+    client = redis.StrictRedis.from_url(redis_uri)
+    yield client
+    client.flushdb()
 
 
 class TestSalesForceBayeuxClientSetup:
@@ -169,10 +172,10 @@ class TestSalesForceBayeuxClientAuthentication:
 
         client.login()
 
-        assert access_token == client.access_token
+        assert client.access_token == access_token
         assert (
-            'https://some.salesforce.server/cometd/37.0' ==
-            client.server_uri
+            client.server_uri ==
+            'https://some.salesforce.server/cometd/37.0'
         )
         assert (
             login.call_args ==
@@ -188,7 +191,7 @@ class TestSalesForceBayeuxClientAuthentication:
 
     def test_get_authorisation(self, client, access_token):
         client.access_token = access_token
-        assert ('Bearer', access_token) == client.get_authorisation()
+        assert client.get_authorisation() == ('Bearer', access_token)
 
 
 class TestSalesForceBayeuxClientReplayStorage:
@@ -210,13 +213,15 @@ class TestSalesForceBayeuxClientReplayStorage:
 
         client.set_replay_id(channel_name, 11)
 
-        assert 11 == int(
+        replay_id = int(
             redis_client.get('salesforce:replay_id:/topic/number/one'))
+        assert replay_id == 11
 
         client.set_replay_id(channel_name, 22)
 
-        assert 22 == int(
+        replay_id = int(
             redis_client.get('salesforce:replay_id:/topic/number/one'))
+        assert replay_id == 22
 
     def test_get_replay_id(self, client, redis_client):
 
@@ -227,7 +232,7 @@ class TestSalesForceBayeuxClientReplayStorage:
         redis_client.set(
             'salesforce:replay_id:/topic/number/one', 11)
 
-        assert 11 == client.get_replay_id(channel_name)
+        assert client.get_replay_id(channel_name) == 11
 
 
     @patch.object(SalesForceBayeuxClient, 'send_and_handle')
@@ -262,4 +267,4 @@ class TestSalesForceBayeuxClientReplayStorage:
                 'subscription': '/topic/ham',
             },
         ]
-        assert call(expected_subscriptions) == send_and_handle.call_args
+        assert send_and_handle.call_args == call(expected_subscriptions)
