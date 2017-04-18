@@ -142,7 +142,7 @@ class TestSalesForceBayeuxClientSetup:
 
         client.setup()
 
-        assert client.replay_enabled == True
+        assert client.replay_enabled is True
         assert client.replay_storage_ttl == 3600
 
 
@@ -233,7 +233,6 @@ class TestSalesForceBayeuxClientReplayStorage:
             'salesforce:replay_id:/topic/number/one', 11)
 
         assert client.get_replay_id(channel_name) == 11
-
 
     @patch.object(SalesForceBayeuxClient, 'send_and_handle')
     def test_subscribe(self, send_and_handle, client, redis_client):
