@@ -75,7 +75,6 @@ def message_maker(config, client_id):
             }
             message.update(**fields)
             return message
-            return message
 
         def make_handshake_response(self, **fields):
             message = {
@@ -123,6 +122,47 @@ def message_maker(config, client_id):
             return message
 
     return MessageMaker()
+
+
+@pytest.fixture
+def notifications(message_maker):
+    return [
+        {
+            'event': {
+                'createdDate': '2016-03-29T16:40:08.208Z',
+                'replayId': 1,
+                'type': 'created',
+            },
+            'sobject': {
+                'Id': '001D000000KnaXjIAJ',
+                'FirstName': 'Rocky',
+                'LastName': 'Balboa',
+            }
+        },
+        {
+            'event': {
+                'createdDate': '2016-03-29T16:40:08.208Z',
+                'replayId': 2,
+                'type': 'updated',
+            },
+            'sobject': {
+                'Id': '006D000000KnaXjIAJ',
+                'Name': 'TicTacToe'
+            }
+        },
+        {
+            'event': {
+                'createdDate': '2016-03-29T16:40:08.208Z',
+                'replayId': 3,
+                'type': 'created',
+            },
+            'sobject': {
+                'Id': '004D000000KnaXjIAJ',
+                'FirstName': 'John',
+                'LastName': 'Rambo',
+            }
+        },
+    ]
 
 
 @pytest.fixture
@@ -226,7 +266,7 @@ def responses():
     return []
 
 
-def test_subscribe(message_maker, run_services, tracker):
+def test_subscribe(message_maker, notifications, run_services, tracker):
 
     class Service:
 
@@ -236,6 +276,8 @@ def test_subscribe(message_maker, run_services, tracker):
         @subscribe('/topic/ContactUpdates')
         def handle_event(self, topic, event):
             tracker.handle_event(topic, event)
+
+    notification_one, notification_two, notification_three = notifications
 
     responses = [
         [message_maker.make_handshake_response()],
@@ -253,32 +295,11 @@ def test_subscribe(message_maker, run_services, tracker):
         [
             message_maker.make_event_delivery_message(
                 channel='/topic/ContactUpdates',
-                data={
-                    'event': {
-                        'createdDate': '2016-03-29T16:40:08.208Z',
-                        'replayId': 1,
-                        'type': 'created'
-                    },
-                    'sobject': {
-                        'Id': '001D000000KnaXjIAJ',
-                        'FirstName': 'Rocky',
-                        'LastName': 'Balboa',
-                    }
-                }
+                data=notification_one,
             ),
             message_maker.make_event_delivery_message(
                 channel='/topic/AccountUpdates',
-                data={
-                    'event': {
-                        'createdDate': '2016-03-29T16:40:08.208Z',
-                        'replayId': 2,
-                        'type': 'updated'
-                    },
-                    'sobject': {
-                        'Id': '006D000000KnaXjIAJ',
-                        'Name': 'TicTacToe'
-                    }
-                }
+                data=notification_two,
             ),
         ],
         # no event to deliver within server timeout
@@ -287,18 +308,7 @@ def test_subscribe(message_maker, run_services, tracker):
         [
             message_maker.make_event_delivery_message(
                 channel='/topic/ContactUpdates',
-                data={
-                    'event': {
-                        'createdDate': '2016-03-29T16:40:08.208Z',
-                        'replayId': 3,
-                        'type': 'created'
-                    },
-                    'sobject': {
-                        'Id': '004D000000KnaXjIAJ',
-                        'FirstName': 'John',
-                        'LastName': 'Rambo',
-                    }
-                }
+                data=notification_three,
             ),
         ],
     ]
@@ -326,49 +336,8 @@ def test_subscribe(message_maker, run_services, tracker):
     ]
 
     expected_event_handling = [
-        call(
-            '/topic/ContactUpdates',
-            {
-                'event': {
-                    'createdDate': '2016-03-29T16:40:08.208Z',
-                    'replayId': 1,
-                    'type': 'created',
-                },
-                'sobject': {
-                    'Id': '001D000000KnaXjIAJ',
-                    'FirstName': 'Rocky',
-                    'LastName': 'Balboa',
-                }
-            }
-        ),
-        call(
-            '/topic/AccountUpdates',
-            {
-                'event': {
-                    'createdDate': '2016-03-29T16:40:08.208Z',
-                    'replayId': 2,
-                    'type': 'updated',
-                },
-                'sobject': {
-                    'Id': '006D000000KnaXjIAJ',
-                    'Name': 'TicTacToe'
-                }
-            }
-        ),
-        call(
-            '/topic/ContactUpdates',
-            {
-                'event': {
-                    'createdDate': '2016-03-29T16:40:08.208Z',
-                    'replayId': 3,
-                    'type': 'created',
-                },
-                'sobject': {
-                    'Id': '004D000000KnaXjIAJ',
-                    'FirstName': 'John',
-                    'LastName': 'Rambo',
-                }
-            }
-        ),
+        call('/topic/ContactUpdates', notification_one),
+        call('/topic/AccountUpdates', notification_two),
+        call('/topic/ContactUpdates', notification_three),
     ]
     assert tracker.handle_event.call_args_list == expected_event_handling
