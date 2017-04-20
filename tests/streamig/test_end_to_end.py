@@ -1,9 +1,9 @@
 import json
-import socket
 
 from eventlet import sleep
 from eventlet.event import Event
 from mock import call, Mock, patch
+from nameko.testing.utils import find_free_port
 from nameko.web.handlers import http
 from nameko_bayeux_client.constants import Reconnection
 import pytest
@@ -167,11 +167,7 @@ def notifications(message_maker):
 
 @pytest.fixture
 def salesforce_server_port():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('127.0.0.1', 0))
-    port = sock.getsockname()[1]
-    sock.close()
-    return port
+    return find_free_port()
 
 
 @pytest.fixture
@@ -197,47 +193,50 @@ def waiter():
 
 
 @pytest.fixture
-def salesforce_server(
-    container_factory, salesforce_server_port, message_maker, responses,
-    tracker, waiter
+def make_salesforce_server(
+    container_factory, salesforce_server_port, message_maker, tracker, waiter
 ):
     """ Return a container to imitating Salesforce Streaming API server
     """
 
-    class CometdServer(object):
+    def _make(responses):
 
-        name = "cometd"
+        class CometdServer(object):
 
-        @http('POST', "/cometd/37.0")
-        def handle(self, request):
-            tracker.request(
-                json.loads(request.get_data().decode(encoding='UTF-8')))
-            try:
-                return 200, json.dumps(responses.pop(0))
-            except IndexError:
-                waiter.send()
-                sleep(0.1)
-                return (
-                    200,
-                    json.dumps([message_maker.make_connect_response()]))
+            name = "cometd"
 
-    config = {
-        'WEB_SERVER_ADDRESS': 'localhost:{}'.format(
-            salesforce_server_port)
-    }
-    container = container_factory(CometdServer, config)
+            @http('POST', "/cometd/37.0")
+            def handle(self, request):
+                tracker.request(
+                    json.loads(request.get_data().decode(encoding='UTF-8')))
+                try:
+                    return 200, json.dumps(responses.pop(0))
+                except IndexError:
+                    waiter.send()
+                    sleep(0.1)
+                    no_events_to_deliver = [
+                        message_maker.make_connect_response()]
+                    return (200, json.dumps(no_events_to_deliver))
 
-    return container
+        config = {
+            'WEB_SERVER_ADDRESS': 'localhost:{}'.format(
+                salesforce_server_port)
+        }
+        container = container_factory(CometdServer, config)
+
+        return container
+
+    return _make
 
 
 @pytest.fixture
 def run_services(
-    container_factory, config, login, salesforce_server, responses, waiter
+    container_factory, config, login, make_salesforce_server, waiter
 ):
     """ Returns services runner
     """
 
-    def _run(service_class, extra_responses):
+    def _run(service_class, responses):
         """
         Run testing salesforce server and the tested example service
 
@@ -246,8 +245,7 @@ def run_services(
 
         """
 
-        responses.extend(extra_responses)
-
+        salesforce_server = make_salesforce_server(responses)
         container = container_factory(service_class, config)
 
         salesforce_server.start()
