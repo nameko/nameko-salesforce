@@ -3,17 +3,11 @@ import redis
 
 
 @pytest.fixture
-def config():
-    config = {}
-    config['SALESFORCE'] = {
+def config(config):
+    config['SALESFORCE'].update({
         'BAYEUX_VERSION': '1.0',
         'BAYEUX_MINIMUM_VERSION': '1.0',
-        'USERNAME': 'Rocky',
-        'PASSWORD': 'Balboa',
-        'SECURITY_TOKEN': 'ABCD1234',
-        'SANDBOX': False,
-        'API_VERSION': '37.0',
-    }
+    })
     return config
 
 
