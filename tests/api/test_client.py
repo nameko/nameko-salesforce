@@ -35,7 +35,7 @@ def fast_retry():
 
 
 def test_proxy(client,  mock_salesforce_server):
-    requests_data = {'LastName':'Smith','Email':'example@example.com'}
+    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],
         'id': '003e0000003GuNXAA0',
@@ -52,7 +52,7 @@ def test_proxy(client,  mock_salesforce_server):
 
 def test_concurrency(client, mock_salesforce_server):
 
-    requests_data = {'LastName':'Smith','Email':'example@example.com'}
+    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],
         'id': '003e0000003GuNXAA0',
@@ -94,7 +94,7 @@ def test_concurrency(client, mock_salesforce_server):
 
 def test_pool_reuses_clients(client, mock_salesforce_server):
 
-    requests_data = {'LastName':'Smith','Email':'example@example.com'}
+    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],
         'id': '003e0000003GuNXAA0',
@@ -114,7 +114,7 @@ def test_pool_reuses_clients(client, mock_salesforce_server):
 def test_bad_clients_are_discarded(client, mock_salesforce_server):
 
     # first call is successful; second is session expired; third is successful
-    requests_data = {'LastName':'Smith','Email':'example@example.com'}
+    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],
         'id': '003e0000003GuNXAA0',
@@ -147,7 +147,7 @@ def test_bad_clients_are_discarded(client, mock_salesforce_server):
 def test_proxy_retries_on_session_expired(client, mock_salesforce_server):
 
     # first call is session expired; second is success
-    requests_data = {'LastName':'Smith','Email':'example@example.com'}
+    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],
         'id': '003e0000003GuNXAA0',
@@ -173,12 +173,7 @@ def test_proxy_retries_on_session_expired(client, mock_salesforce_server):
 def test_other_salesforce_errors_are_raised(client, mock_salesforce_server):
 
     # first call is session expired; second is a 404
-    requests_data = {'LastName':'Smith','Email':'example@example.com'}
-    response_data = {
-        'errors': [],
-        'id': '003e0000003GuNXAA0',
-        'success': True
-    }
+    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     mock_salesforce_server.post(
         requests_mock.ANY,
         [
