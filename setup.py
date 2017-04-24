@@ -12,7 +12,11 @@ setup(
     url='http://github.com/iky/nameko-salesforce',
     py_modules=['nameko_salesforce'],
     install_requires=[
+        "cachetools==2.0.0",
         "nameko>=2.5.1",
+        "nameko-bayeux-client==0.0.1",
+        "redis==2.10.5",
+        "simple-salesforce==0.72.2",
     ],
     extras_require={
         'dev': [
@@ -20,9 +24,7 @@ setup(
             "flake8==3.2.1",
             "pylint==1.6.5",
             "pytest==3.0.6",
-            "redis==2.10.5",
             "requests-mock==1.3.0",
-            "simple-salesforce==0.72.2",
         ]
     },
     dependency_links=[],
