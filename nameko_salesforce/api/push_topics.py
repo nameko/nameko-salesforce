@@ -4,6 +4,7 @@ import operator
 from cachetools import LRUCache, cachedmethod
 
 from nameko_salesforce.api.client import ClientPool, ClientProxy
+from nameko_salesforce import constants
 
 
 cached = cachedmethod(operator.attrgetter('cache'))
@@ -31,15 +32,30 @@ class PushTopicsAPIClient(ClientProxy):
         self.config = config
         super().__init__(pool)
 
-    def declare_push_topic(
-        self, sobject_type, record_type=None, exclude_current_user=False
+    def declare_push_topic_for_sobject(
+        self,
+        sobject_type,
+        record_type=None,
+        exclude_current_user=False,
+        notify_for_fields=constants.NotifyForFields.all_,
+        notify_for_operation_create = True,
+        notify_for_operation_update = True,
+        notify_for_operation_delete = True,
+        notify_for_operation_undelete = True,
     ):
         """
-        Update or create Push Topic object
+        Update or create Push Topic object notifying given sobject changes
 
-        Note that the update or create operation is not atomic and there
-        is a race condition with multiple services trying to declare the topic
-        at the same time.
+        :sobject_type:
+            Name of the Salesforce obuject (e.g. Contact, Task, ...)
+
+        :record_type:
+            Optional record type name filtering notifications for a subset
+            of the given Salesforce object type.
+
+        :exclude_current_user:
+            Exclude changes done by the same user as this extension uses to
+            connect to the Salesforce API. Defaults to ``False``.
 
         """
 
@@ -50,7 +66,7 @@ class PushTopicsAPIClient(ClientProxy):
         else:
             name = sobject_type
 
-        push_topic_query = (
+        query = (
             "SELECT Id, Name, LastModifiedById, LastModifiedDate FROM {}"
             .format(sobject_type))
 
@@ -65,18 +81,79 @@ class PushTopicsAPIClient(ClientProxy):
                 "LastModifiedById != '{}'".format(current_user_id))
 
         if conditions:
-            push_topic_query = '{} WHERE {}'.format(
-                push_topic_query, ' AND '.join(conditions))
+            query = '{} WHERE {}'.format(
+                query, ' AND '.join(conditions))
+
+        return self.declare_push_topic(
+            name=name,
+            query=query,
+            notify_for_fields=notify_for_fields,
+            notify_for_operation_create=notify_for_operation_create,
+            notify_for_operation_update=notify_for_operation_update,
+            notify_for_operation_delete=notify_for_operation_delete,
+            notify_for_operation_undelete=notify_for_operation_undelete)
+
+    def declare_push_topic(
+        self,
+        name=None,
+        query=None,
+        notify_for_fields=constants.NotifyForFields.all_,
+        notify_for_operation_create = True,
+        notify_for_operation_update = True,
+        notify_for_operation_delete = True,
+        notify_for_operation_undelete = True,
+    ):
+        """
+        Update or create Push Topic object
+
+        Note that the update or create operation is not atomic and there
+        is a race condition with multiple services trying to declare the topic
+        at the same time.
+
+        :params name:
+            Descriptive name of the Push Topic object to create,
+            such as `MyNewCases` or `TeamUpdatedContacts`. The maximum length
+            is 25 characters. This value identifies the channel and must be
+            unique.
+
+        :param query:
+            The SOQL query statement that determines which record changes
+            trigger events to be sent to the channel.
+
+        :params notify_for_fields:
+            Specifies which fields are evaluated to generate a notification.
+            See :class:`~.constants.NotifyForFields` for valid options.
+
+        :params notify_for_operation_create:
+            ``True`` if a create operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
+        :params notify_for_operation_update:
+            ``True`` if an update operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
+        :params notify_for_operation_delete:
+            ``True`` if a delete operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
+        :params notify_for_operation_undelete:
+            ``True`` if an undelete operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
+        """
+
+        if not isinstance(notify_for_fields, constants.NotifyForFields):
+            notify_for_fields = constants.NotifyForFields(notify_for_fields)
 
         push_topic_data = {
             'Name': name,
-            'Query': push_topic_query,
+            'Query': query,
             'ApiVersion': self.config['SALESFORCE']['API_VERSION'],
-            'NotifyForOperationCreate': True,
-            'NotifyForOperationUpdate': True,
-            'NotifyForOperationUndelete': True,
-            'NotifyForOperationDelete': True,
-            'NotifyForFields': 'All',
+            'NotifyForOperationCreate': notify_for_operation_create,
+            'NotifyForOperationUpdate': notify_for_operation_update,
+            'NotifyForOperationDelete': notify_for_operation_delete,
+            'NotifyForOperationUndelete': notify_for_operation_undelete,
+            'NotifyForFields': notify_for_fields.value,
         }
 
         try:
