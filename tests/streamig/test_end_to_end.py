@@ -270,26 +270,13 @@ def salesforce_api_server(salesforce_server_uri):
     Mocked Salesforce API server
 
     Notification entrypoints creates PushTopic objects using Salesforce API.
-    Here the API is mocked and responses preset to simulate a simple
+    Here the API is mocked to be able to preset responses simulating a simple
     PushTopic declaration scenario.
 
     """
     with patch('simple_salesforce.api.SalesforceLogin') as SalesforceLogin:
         SalesforceLogin.return_value = 'session', 'abc.salesforce.com'
         with requests_mock.Mocker() as mocked_requests:
-            # mock Salesforce API calls:
-            mocked_requests.get(
-                requests_mock.ANY,
-                [
-                    # getting current user ID
-                    {'json': {'totalSize': 1, 'records': [{'Id': '00..A0'}]}},
-                    # getting the PushTopic
-                    {'json': {'totalSize': 0}}
-                ])
-            mocked_requests.post(requests_mock.ANY, json={})
-            # un-mock Salesforce Streaming API calls making the mocker to let
-            # the requests reach the testing streaming API server:
-            mocked_requests.post(salesforce_server_uri, real_http=True)
             yield mocked_requests
 
 
@@ -372,8 +359,14 @@ def test_subscribe(message_maker, notifications, run_services, tracker):
 
 def test_handle_notification(
     message_maker, notifications, run_services, tracker,
-    salesforce_api_server
+    salesforce_api_server, salesforce_server_uri
 ):
+
+    salesforce_api_server.get(requests_mock.ANY, json={'totalSize': 0})
+    salesforce_api_server.post(requests_mock.ANY, json={})
+    # un-mock Salesforce Streaming API calls making the mocker to let
+    # streaming requests reach the testing streaming API server:
+    salesforce_api_server.post(salesforce_server_uri, real_http=True)
 
     class Service:
 
@@ -480,8 +473,21 @@ def test_handle_notification(
 
 def test_handle_sobject_notification(
     message_maker, notifications, run_services, tracker,
-    salesforce_api_server
+    salesforce_api_server, salesforce_server_uri
 ):
+
+    salesforce_api_server.get(
+        requests_mock.ANY,
+        [
+            # getting current user ID
+            {'json': {'totalSize': 1, 'records': [{'Id': '00..A0'}]}},
+            # getting the PushTopic
+            {'json': {'totalSize': 0}}
+        ])
+    salesforce_api_server.post(requests_mock.ANY, json={})
+    # un-mock Salesforce Streaming API calls making the mocker to let
+    # streaming requests reach the testing streaming API server:
+    salesforce_api_server.post(salesforce_server_uri, real_http=True)
 
     class Service:
 
