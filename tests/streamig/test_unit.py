@@ -6,8 +6,8 @@ import pytest
 
 from nameko_salesforce import constants
 from nameko_salesforce.streaming.client import (
-    SalesForceBayeuxClient,
-    SalesforceMessageHandler,
+    StreamingClient,
+    MessageHandler,
 )
 
 
@@ -20,16 +20,16 @@ def container(config):
 
 @pytest.fixture
 def client(container):
-    client = SalesForceBayeuxClient()
+    client = StreamingClient()
     client.container = container
     client.setup()
     return client
 
 
-class TestSalesForceBayeuxClientSetup:
+class TestStreamingClientSetup:
     """ Unit tests client setup
 
-    Unit tests for setup related parts of `SalesForceBayeuxClient`.
+    Unit tests for setup related parts of `StreamingClient`.
     """
 
     def test_setup(self, client, config):
@@ -46,7 +46,7 @@ class TestSalesForceBayeuxClientSetup:
 
         container.config.pop('SALESFORCE')
 
-        client = SalesForceBayeuxClient()
+        client = StreamingClient()
         client.container = container
 
         with pytest.raises(ConfigurationError) as exc:
@@ -68,7 +68,7 @@ class TestSalesForceBayeuxClientSetup:
 
         container.config[constants.CONFIG_KEY].pop(key, None)
 
-        client = SalesForceBayeuxClient()
+        client = StreamingClient()
         client.container = container
         client.setup()
 
@@ -81,7 +81,7 @@ class TestSalesForceBayeuxClientSetup:
 
         container.config[constants.CONFIG_KEY].pop(key)
 
-        client = SalesForceBayeuxClient()
+        client = StreamingClient()
         client.container = container
 
         with pytest.raises(ConfigurationError) as exc:
@@ -97,7 +97,7 @@ class TestSalesForceBayeuxClientSetup:
         config = container.config[constants.CONFIG_KEY]
         config['PUSHTOPIC_REPLAY_ENABLED'] = True
 
-        client = SalesForceBayeuxClient()
+        client = StreamingClient()
         client.container = container
 
         with pytest.raises(ConfigurationError) as exc:
@@ -118,10 +118,10 @@ class TestSalesForceBayeuxClientSetup:
         assert client.replay_storage_ttl == 3600
 
 
-class TestSalesForceBayeuxClientAuthentication:
+class TestStreamingClientAuthentication:
     """ Unit test client authentication
 
-    Unit tests for authentication related parts of `SalesForceBayeuxClient`.
+    Unit tests for authentication related parts of `StreamingClient`.
     """
 
     @pytest.fixture
@@ -166,10 +166,10 @@ class TestSalesForceBayeuxClientAuthentication:
         assert client.get_authorisation() == ('Bearer', access_token)
 
 
-class TestSalesForceBayeuxClientReplayStorage:
+class TestStreamingClientReplayStorage:
     """ Unit test the Replay ID storage extension
 
-    Unit tests for Reply ID related parts of `SalesForceBayeuxClient`.
+    Unit tests for Reply ID related parts of `StreamingClient`.
     """
 
     @pytest.fixture
@@ -206,7 +206,7 @@ class TestSalesForceBayeuxClientReplayStorage:
 
         assert client.get_replay_id(channel_name) == 11
 
-    @patch.object(SalesForceBayeuxClient, 'send_and_handle')
+    @patch.object(StreamingClient, 'send_and_handle')
     def test_subscribe(self, send_and_handle, client, redis_client):
 
         client._subscriptions = ['/topic/spam', '/topic/egg', '/topic/ham']
@@ -241,10 +241,10 @@ class TestSalesForceBayeuxClientReplayStorage:
         assert send_and_handle.call_args == call(expected_subscriptions)
 
 
-class TestSalesforceMessageHandler:
+class TestMessageHandler:
     """ Unit test the `subscribe` entrypoint handler
 
-    Unit tests for `TestSalesforceMessageHandler`.
+    Unit tests for `TestMessageHandler`.
     """
 
     @pytest.fixture
@@ -253,8 +253,8 @@ class TestSalesforceMessageHandler:
 
     @pytest.fixture
     def handler(self, channel_name):
-        with patch.object(SalesForceBayeuxClient, 'set_replay_id'):
-            handler = SalesforceMessageHandler(channel_name)
+        with patch.object(StreamingClient, 'set_replay_id'):
+            handler = MessageHandler(channel_name)
             handler.container = Mock()
             handler.client.replay_storage = Mock()
             yield handler

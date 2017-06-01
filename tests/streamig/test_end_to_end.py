@@ -9,7 +9,7 @@ from nameko_bayeux_client.constants import Reconnection
 import pytest
 
 from nameko_salesforce.streaming.client import (
-    SalesForceBayeuxClient,
+    StreamingClient,
     subscribe,
 )
 

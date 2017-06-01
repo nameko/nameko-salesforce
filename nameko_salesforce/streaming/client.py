@@ -13,7 +13,7 @@ from nameko_salesforce.streaming import channels
 logger = logging.getLogger(__name__)
 
 
-class SalesForceBayeuxClient(BayeuxClient):
+class StreamingClient(BayeuxClient):
 
     def __init__(self):
 
@@ -177,9 +177,9 @@ class SalesForceBayeuxClient(BayeuxClient):
         pipe.execute()
 
 
-class SalesforceMessageHandler(BayeuxMessageHandler):
+class MessageHandler(BayeuxMessageHandler):
 
-    client = SalesForceBayeuxClient()
+    client = StreamingClient()
 
     def handle_message(self, message):
         args = (self.channel_name, message)
@@ -197,5 +197,6 @@ class SalesforceMessageHandler(BayeuxMessageHandler):
             self.client.set_replay_id(self.channel_name, replay_id)
         return result, exc_info
 
+subscribe = MessageHandler.decorator
 
-subscribe = SalesforceMessageHandler.decorator
+
