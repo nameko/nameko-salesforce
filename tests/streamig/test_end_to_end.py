@@ -7,10 +7,14 @@ from nameko.testing.utils import find_free_port
 from nameko.web.handlers import http
 from nameko_bayeux_client.constants import Reconnection
 import pytest
+import requests_mock
 
+from nameko_salesforce import constants
 from nameko_salesforce.streaming.client import (
     StreamingClient,
     subscribe,
+    handle_notification,
+    handle_sobject_notification
 )
 
 
@@ -171,14 +175,15 @@ def salesforce_server_port():
 
 
 @pytest.fixture
-def login(salesforce_server_port):
+def salesforce_server_uri(salesforce_server_port):
+    return 'http://localhost:{}/cometd/37.0'.format(salesforce_server_port)
+
+
+@pytest.fixture
+def login(salesforce_server_uri):
     def patched_login(obj):
-        obj.server_uri = (
-            'http://localhost:{}/cometd/37.0'.format(
-                salesforce_server_port))
-    with patch.object(
-        SalesForceBayeuxClient, 'login', patched_login
-    ) as login:
+        obj.server_uri = salesforce_server_uri
+    with patch.object(StreamingClient, 'login', patched_login) as login:
         yield login
 
 
@@ -260,8 +265,32 @@ def run_services(
 
 
 @pytest.fixture
-def responses():
-    return []
+def salesforce_api_server(salesforce_server_uri):
+    """
+    Mocked Salesforce API server
+
+    Notification entrypoints creates PushTopic objects using Salesforce API.
+    Here the API is mocked and responses preset to simulate a simple
+    PushTopic declaration scenario.
+
+    """
+    with patch('simple_salesforce.api.SalesforceLogin') as SalesforceLogin:
+        SalesforceLogin.return_value = 'session', 'abc.salesforce.com'
+        with requests_mock.Mocker() as mocked_requests:
+            # mock Salesforce API calls:
+            mocked_requests.get(
+                requests_mock.ANY,
+                [
+                    # getting current user ID
+                    {'json': {'totalSize': 1, 'records': [{'Id': '00..A0'}]}},
+                    # getting the PushTopic
+                    {'json': {'totalSize': 0}}
+                ])
+            mocked_requests.post(requests_mock.ANY, json={})
+            # un-mock Salesforce Streaming API calls making the mocker to let
+            # the requests reach the testing streaming API server:
+            mocked_requests.post(salesforce_server_uri, real_http=True)
+            yield mocked_requests
 
 
 def test_subscribe(message_maker, notifications, run_services, tracker):
@@ -339,3 +368,224 @@ def test_subscribe(message_maker, notifications, run_services, tracker):
         call('/topic/ContactUpdates', notification_three),
     ]
     assert tracker.handle_event.call_args_list == expected_event_handling
+
+
+def test_handle_notification(
+    message_maker, notifications, run_services, tracker,
+    salesforce_api_server
+):
+
+    class Service:
+
+        name = 'example-service'
+
+        @handle_notification('AccountUpdates')
+        @handle_notification(
+            'ContactUpdates',
+            query='SELECT ...',
+            notify_for_fields=constants.NotifyForFields.referenced,
+            notify_for_operation_create=False,
+            notify_for_operation_update=True,
+            notify_for_operation_delete=False,
+            notify_for_operation_undelete=False
+        )
+        def handle_notification(self, topic, notification):
+            tracker.handle_notification(topic, notification)
+
+    notification_one, notification_two, notification_three = notifications
+
+    responses = [
+        [message_maker.make_handshake_response()],
+        [
+            message_maker.make_subscribe_response(
+                subscription='/topic/AccountUpdates'),
+            message_maker.make_subscribe_response(
+                subscription='/topic/ContactUpdates'),
+        ],
+        [
+            message_maker.make_connect_response(
+                advice={'reconnect': Reconnection.retry.value}),
+        ],
+        # two notifications to deliver
+        [
+            message_maker.make_event_delivery_message(
+                channel='/topic/ContactUpdates',
+                data=notification_one,
+            ),
+            message_maker.make_event_delivery_message(
+                channel='/topic/AccountUpdates',
+                data=notification_two,
+            ),
+        ],
+        # no notification to deliver within server timeout
+        [message_maker.make_connect_response()],
+        # one notification to deliver
+        [
+            message_maker.make_event_delivery_message(
+                channel='/topic/ContactUpdates',
+                data=notification_three,
+            ),
+        ],
+    ]
+
+    run_services(Service, responses)
+
+    handshake, subscriptions = tracker.request.call_args_list[:2]
+    connect = tracker.request.call_args_list[2:]
+
+    assert handshake == call(
+        [message_maker.make_handshake_request(id=1)])
+
+    topics = [
+        message.pop('subscription') for message in subscriptions[0][0]
+    ]
+    assert set(topics) == set(
+        ['/topic/AccountUpdates', '/topic/ContactUpdates'])
+
+    assert connect == [
+        call([message_maker.make_connect_request(id=4)]),
+        call([message_maker.make_connect_request(id=5)]),
+        call([message_maker.make_connect_request(id=6)]),
+        call([message_maker.make_connect_request(id=7)]),
+        call([message_maker.make_connect_request(id=8)]),
+    ]
+
+    expected_notification_handling = [
+        call('ContactUpdates', notification_one),
+        call('AccountUpdates', notification_two),
+        call('ContactUpdates', notification_three),
+    ]
+    assert (
+        tracker.handle_notification.call_args_list ==
+        expected_notification_handling)
+
+    get_push_topic, create_push_topic = (
+        salesforce_api_server.request_history[:2])
+
+    assert get_push_topic.method == 'GET'
+    assert create_push_topic.method == 'POST'
+
+    push_topic_definition = create_push_topic.json()
+
+    assert push_topic_definition['Name'] == 'ContactUpdates'
+    assert push_topic_definition['Query'] == 'SELECT ...'
+    assert (
+        push_topic_definition['NotifyForFields'] ==
+        constants.NotifyForFields.referenced.value)
+    assert push_topic_definition['NotifyForOperationCreate'] is False
+    assert push_topic_definition['NotifyForOperationUpdate'] is True
+    assert push_topic_definition['NotifyForOperationDelete'] is False
+    assert push_topic_definition['NotifyForOperationUndelete'] is False
+
+
+def test_handle_sobject_notification(
+    message_maker, notifications, run_services, tracker,
+    salesforce_api_server
+):
+
+    class Service:
+
+        name = 'example-service'
+
+        @handle_sobject_notification('Contact', declare=False)
+        @handle_sobject_notification(
+            sobject_type='Contact',
+            record_type='Student',
+            exclude_current_user=False,
+            notify_for_fields=constants.NotifyForFields.referenced,
+            notify_for_operation_create=False,
+            notify_for_operation_update=True,
+            notify_for_operation_delete=False,
+            notify_for_operation_undelete=False
+        )
+        def handle_notification(
+            self, sobject_type, record_type, notification
+        ):
+            tracker.handle_notification(
+                sobject_type, record_type, notification)
+
+    notification_one, notification_two, notification_three = notifications
+
+    responses = [
+        [message_maker.make_handshake_response()],
+        [
+            message_maker.make_subscribe_response(
+                subscription='/topic/Contact'),
+            message_maker.make_subscribe_response(
+                subscription='/topic/ContactStudent'),
+        ],
+        [
+            message_maker.make_connect_response(
+                advice={'reconnect': Reconnection.retry.value}),
+        ],
+        # two notifications to deliver
+        [
+            message_maker.make_event_delivery_message(
+                channel='/topic/ContactStudent',
+                data=notification_one,
+            ),
+            message_maker.make_event_delivery_message(
+                channel='/topic/Contact',
+                data=notification_two,
+            ),
+        ],
+        # no notification to deliver within server timeout
+        [message_maker.make_connect_response()],
+        # one notification to deliver
+        [
+            message_maker.make_event_delivery_message(
+                channel='/topic/ContactStudent',
+                data=notification_three,
+            ),
+        ],
+    ]
+
+    run_services(Service, responses)
+
+    handshake, subscriptions = tracker.request.call_args_list[:2]
+    connect = tracker.request.call_args_list[2:]
+
+    assert handshake == call(
+        [message_maker.make_handshake_request(id=1)])
+
+    topics = [
+        message.pop('subscription') for message in subscriptions[0][0]
+    ]
+    assert set(topics) == set(
+        ['/topic/Contact', '/topic/ContactStudent'])
+
+    assert connect == [
+        call([message_maker.make_connect_request(id=4)]),
+        call([message_maker.make_connect_request(id=5)]),
+        call([message_maker.make_connect_request(id=6)]),
+        call([message_maker.make_connect_request(id=7)]),
+        call([message_maker.make_connect_request(id=8)]),
+    ]
+
+    expected_notification_handling = [
+        call('Contact', 'Student', notification_one),
+        call('Contact', None, notification_two),
+        call('Contact', 'Student', notification_three),
+    ]
+    assert (
+        tracker.handle_notification.call_args_list ==
+        expected_notification_handling)
+
+    get_user_id, get_push_topic, create_push_topic = (
+        salesforce_api_server.request_history[:3])
+
+    assert get_user_id.method == 'GET'
+    assert get_push_topic.method == 'GET'
+    assert create_push_topic.method == 'POST'
+
+    push_topic_definition = create_push_topic.json()
+
+    assert push_topic_definition['Name'] == 'ContactStudent'
+    assert push_topic_definition['Query'].startswith('SELECT')
+    assert (
+        push_topic_definition['NotifyForFields'] ==
+        constants.NotifyForFields.referenced.value)
+    assert push_topic_definition['NotifyForOperationCreate'] is False
+    assert push_topic_definition['NotifyForOperationUpdate'] is True
+    assert push_topic_definition['NotifyForOperationDelete'] is False
+    assert push_topic_definition['NotifyForOperationUndelete'] is False

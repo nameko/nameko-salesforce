@@ -7,6 +7,7 @@ import redis
 from simple_salesforce.login import SalesforceLogin
 
 from nameko_salesforce import constants
+from nameko_salesforce.api import push_topics
 from nameko_salesforce.streaming import channels
 
 
@@ -182,8 +183,7 @@ class MessageHandler(BayeuxMessageHandler):
     client = StreamingClient()
 
     def handle_message(self, message):
-        args = (self.channel_name, message)
-        kwargs = {}
+        args, kwargs = self.get_worker_args(message)
         context_data = {}
 
         replay_id = message['event']['replayId']
@@ -197,6 +197,133 @@ class MessageHandler(BayeuxMessageHandler):
             self.client.set_replay_id(self.channel_name, replay_id)
         return result, exc_info
 
+    def get_worker_args(self, message):
+        args = (self.channel_name, message)
+        kwargs = {}
+        return args, kwargs
+
+
 subscribe = MessageHandler.decorator
 
 
+class NotificationsClient(StreamingClient):
+
+    def setup(self):
+        #config = self.container.config[constants.CONFIG_KEY]
+        config = self.container.config
+        self.api_client = push_topics.get_client(config)
+
+    def start(self):
+        self._declare_push_topics()
+        super().start()
+
+    def _declare_push_topics(self):
+        for provider in self._providers:
+            provider.declare_push_topic(self.api_client)
+
+
+class NotificationHandler(MessageHandler):
+
+    client = NotificationsClient()
+
+    def __init__(
+        self,
+        name,
+        query=None,
+        notify_for_fields=constants.NotifyForFields.all_,
+        notify_for_operation_create=True,
+        notify_for_operation_update=True,
+        notify_for_operation_delete=True,
+        notify_for_operation_undelete=True,
+    ):
+        self.name = name
+        self.query = query
+        self.notify_for_fields = notify_for_fields
+        self.notify_for_operation_create = notify_for_operation_create
+        self.notify_for_operation_update = notify_for_operation_update
+        self.notify_for_operation_delete = notify_for_operation_delete
+        self.notify_for_operation_undelete = notify_for_operation_undelete
+
+        self.declare = True if self.query else False
+
+        channel_name = '/topic/{}'.format(name)
+        super().__init__(channel_name)
+
+    def get_worker_args(self, message):
+        args = (self.name, message)
+        kwargs = {}
+        return args, kwargs
+
+    def declare_push_topic(self, api_client):
+        if not self.declare:
+            return
+        api_client.declare_push_topic(
+            self.name,
+            self.query,
+            notify_for_fields=self.notify_for_fields,
+            notify_for_operation_create=self.notify_for_operation_create,
+            notify_for_operation_update=self.notify_for_operation_update,
+            notify_for_operation_delete=self.notify_for_operation_delete,
+            notify_for_operation_undelete=self.notify_for_operation_undelete)
+
+
+handle_notification = NotificationHandler.decorator
+
+
+class SobjectNotificationHandler(MessageHandler):
+
+    client = NotificationsClient()
+
+    def __init__(
+        self,
+        sobject_type,
+        record_type=None,
+        declare=True,
+        exclude_current_user=True,
+        notify_for_fields=constants.NotifyForFields.all_,
+        notify_for_operation_create=True,
+        notify_for_operation_update=True,
+        notify_for_operation_delete=True,
+        notify_for_operation_undelete=True,
+    ):
+
+        self.sobject_type = sobject_type
+        self.record_type = record_type
+        self.exclude_current_user = exclude_current_user
+
+        self.notify_for_fields = notify_for_fields
+        self.notify_for_operation_create = notify_for_operation_create
+        self.notify_for_operation_update = notify_for_operation_update
+        self.notify_for_operation_delete = notify_for_operation_delete
+        self.notify_for_operation_undelete = notify_for_operation_undelete
+
+        self.declare = declare
+
+        if self.record_type:
+            topic = '{}{}'.format(sobject_type, record_type)
+        else:
+            topic = sobject_type
+        channel_name = '/topic/{}'.format(topic)
+
+        super().__init__(channel_name)
+
+    def get_worker_args(self, message):
+        args = (self.sobject_type, self.record_type, message)
+        kwargs = {}
+        return args, kwargs
+
+    def declare_push_topic(self, api_client):
+        if not self.declare:
+            return
+        api_client.declare_push_topic_for_sobject(
+            self.sobject_type,
+            self.record_type,
+            exclude_current_user=self.exclude_current_user,
+            notify_for_fields=self.notify_for_fields,
+            notify_for_operation_create=self.notify_for_operation_create,
+            notify_for_operation_update=self.notify_for_operation_update,
+            notify_for_operation_delete=self.notify_for_operation_delete,
+            notify_for_operation_undelete=self.notify_for_operation_undelete)
+
+
+handle_sobject_notification = SobjectNotificationHandler.decorator
