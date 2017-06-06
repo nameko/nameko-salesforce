@@ -6,8 +6,10 @@ import pytest
 
 from nameko_salesforce import constants
 from nameko_salesforce.streaming.client import (
-    StreamingClient,
     MessageHandler,
+    NotificationHandler,
+    SobjectNotificationHandler,
+    StreamingClient,
 )
 
 
@@ -244,7 +246,7 @@ class TestStreamingClientReplayStorage:
 class TestMessageHandler:
     """ Unit test the `subscribe` entrypoint handler
 
-    Unit tests for `TestMessageHandler`.
+    Unit tests for `MessageHandler`.
     """
 
     @pytest.fixture
@@ -273,6 +275,265 @@ class TestMessageHandler:
         assert call_kwargs['context_data'] == {}
         assert call_kwargs['handle_result'].func == handler.handle_result
         assert call_kwargs['handle_result'].args == (replay_id,)
+
+
+class TestNotificationHandler:
+    """ Unit test the `handle_notification` entrypoint handler
+
+    Unit tests for `NotificationHandler`.
+    """
+
+    @pytest.fixture
+    def make_handler(self):
+        with patch.object(StreamingClient, 'set_replay_id'):
+            def _make(*args, **kwargs):
+                handler = NotificationHandler(*args, **kwargs)
+                handler.container = Mock()
+                handler.client.replay_storage = Mock()
+                return handler
+            yield _make
+
+    def test_channel_name(self, make_handler):
+        handler = make_handler('Contact')
+        assert handler.channel_name == '/topic/Contact'
+
+    def test_handle_message(self, make_handler):
+        """ Test that handle_message parses and passes the reply_id
+        """
+
+        name = 'Contact'
+
+        handler = make_handler(name)
+
+        replay_id = '001122'
+        message = {'sobject': 'spam', 'event': {'replayId': replay_id}}
+
+        handler.handle_message(message)
+
+        call_args, call_kwargs = handler.container.spawn_worker.call_args
+        assert call_args == (handler, (name, message), {})
+        assert call_kwargs['context_data'] == {}
+        assert call_kwargs['handle_result'].func == handler.handle_result
+        assert call_kwargs['handle_result'].args == (replay_id,)
+
+    def test_declare_push_topic_no_query(self, make_handler):
+        """ Test that no push topic is declared there is no query is provided
+        """
+
+        name = 'Contact'
+
+        handler = make_handler(name)
+
+        api_client = Mock()
+
+        handler.declare_push_topic(api_client)
+
+        assert api_client.declare_push_topic.call_count == 0
+
+    def test_declare_push_topic_minimal_configuration(self, make_handler):
+        """ Test default push topic declaration
+        """
+
+        name = 'Contact'
+        query = 'SELECT ...'
+
+        handler = make_handler(name, query)
+
+        api_client = Mock()
+
+        handler.declare_push_topic(api_client)
+
+        assert api_client.declare_push_topic.call_args == call(
+            name,
+            query,
+            notify_for_fields=constants.NotifyForFields.all_,
+            notify_for_operation_create=True,
+            notify_for_operation_update=True,
+            notify_for_operation_delete=True,
+            notify_for_operation_undelete=True)
+
+    def test_declare_push_topic_full_configuration(self, make_handler):
+        """ Test fully configured push topic declaration
+        """
+
+        name = 'Contact'
+        query = 'SELECT ...'
+        notify_for_fields = constants.NotifyForFields.referenced
+        notify_for_operation_create = False
+        notify_for_operation_update = False
+        notify_for_operation_delete = False
+        notify_for_operation_undelete = False
+
+        handler = make_handler(
+            name,
+            query,
+            notify_for_fields=constants.NotifyForFields.referenced,
+            notify_for_operation_create=notify_for_operation_create,
+            notify_for_operation_update=notify_for_operation_update,
+            notify_for_operation_delete=notify_for_operation_delete,
+            notify_for_operation_undelete=notify_for_operation_undelete)
+
+        api_client = Mock()
+
+        handler.declare_push_topic(api_client)
+
+        assert api_client.declare_push_topic.call_args == call(
+            name,
+            query,
+            notify_for_fields=notify_for_fields,
+            notify_for_operation_create=notify_for_operation_create,
+            notify_for_operation_update=notify_for_operation_update,
+            notify_for_operation_delete=notify_for_operation_delete,
+            notify_for_operation_undelete=notify_for_operation_undelete)
+
+
+class TestSobjectNotificationHandler:
+    """ Unit test the `handle_sobject_notification` entrypoint handler
+
+    Unit tests for `SobjectNotificationHandler`.
+    """
+
+    @pytest.fixture
+    def make_handler(self):
+        with patch.object(StreamingClient, 'set_replay_id'):
+            def _make(*args, **kwargs):
+                handler = SobjectNotificationHandler(*args, **kwargs)
+                handler.container = Mock()
+                handler.client.replay_storage = Mock()
+                return handler
+            yield _make
+
+    @pytest.mark.parametrize(
+        ('sobject_type', 'record_type', 'expected_channel_name'),
+        (
+            ('Contact', None, '/topic/Contact'),
+            ('Contact', 'Student', '/topic/ContactStudent'),
+        )
+    )
+    def test_channel_name(
+        self, make_handler, sobject_type, record_type, expected_channel_name
+    ):
+        handler = make_handler(sobject_type, record_type)
+        assert handler.channel_name == expected_channel_name
+
+    def test_handle_message(self, make_handler):
+        """ Test that handle_message parses and passes the reply_id
+        """
+
+        sobject_type = 'Contact'
+        record_type = 'Student'
+
+        handler = make_handler(sobject_type, record_type)
+
+        replay_id = '001122'
+        message = {'sobject': 'spam', 'event': {'replayId': replay_id}}
+
+        handler.handle_message(message)
+
+        call_args, call_kwargs = handler.container.spawn_worker.call_args
+        assert call_args == (
+            handler, (sobject_type, record_type, message), {})
+        assert call_kwargs['context_data'] == {}
+        assert call_kwargs['handle_result'].func == handler.handle_result
+        assert call_kwargs['handle_result'].args == (replay_id,)
+
+    def test_declare_push_topic_declaration_disabled(self, make_handler):
+        """ Test that no push topic is declared if switched off
+        """
+
+        sobject_type = 'Contact'
+
+        handler = make_handler(sobject_type, declare=False)
+
+        api_client = Mock()
+
+        handler.declare_push_topic(api_client)
+
+        assert api_client.declare_push_topic_for_sobject.call_count == 0
+
+    def test_declare_push_topic_minimal_configuration(self, make_handler):
+        """ Test default push topic declaration
+        """
+
+        sobject_type = 'Contact'
+
+        handler = make_handler(sobject_type)
+
+        api_client = Mock()
+
+        handler.declare_push_topic(api_client)
+
+        assert api_client.declare_push_topic_for_sobject.call_args == call(
+            sobject_type,
+            None,
+            exclude_current_user=True,
+            notify_for_fields=constants.NotifyForFields.all_,
+            notify_for_operation_create=True,
+            notify_for_operation_update=True,
+            notify_for_operation_delete=True,
+            notify_for_operation_undelete=True)
+
+
+    def test_declare_push_topic_full_configuration(self, make_handler):
+        """ Test fully configured push topic declaration
+        """
+
+        sobject_type = 'Contact'
+        record_type = 'Student'
+        exclude_current_user = False
+        notify_for_fields = constants.NotifyForFields.referenced
+        notify_for_operation_create = False
+        notify_for_operation_update = False
+        notify_for_operation_delete = False
+        notify_for_operation_undelete = False
+
+        handler = make_handler(
+            sobject_type,
+            record_type,
+            exclude_current_user=exclude_current_user,
+            notify_for_fields=constants.NotifyForFields.referenced,
+            notify_for_operation_create=notify_for_operation_create,
+            notify_for_operation_update=notify_for_operation_update,
+            notify_for_operation_delete=notify_for_operation_delete,
+            notify_for_operation_undelete=notify_for_operation_undelete)
+
+        api_client = Mock()
+
+        handler.declare_push_topic(api_client)
+
+        assert api_client.declare_push_topic_for_sobject.call_args == call(
+            sobject_type,
+            record_type,
+            exclude_current_user=exclude_current_user,
+            notify_for_fields=notify_for_fields,
+            notify_for_operation_create=notify_for_operation_create,
+            notify_for_operation_update=notify_for_operation_update,
+            notify_for_operation_delete=notify_for_operation_delete,
+            notify_for_operation_undelete=notify_for_operation_undelete)
+
+
+class TestMessageHandlers:
+    """ Unit test common parts of entrypoints handlers
+
+    Unit tests for `MessageHandler`, `NotificationHandler`
+    and `SobjectNotificationHandler`.
+    """
+
+    @pytest.fixture
+    def channel_name(self):
+        return '/topic/InvoiceStatementUpdates'
+
+    @pytest.fixture(params=(
+        MessageHandler,
+        NotificationHandler,
+        SobjectNotificationHandler))
+    def handler(self, request, channel_name):
+        handler_cls = request.param
+        with patch.object(StreamingClient, 'set_replay_id'):
+            handler = handler_cls(channel_name)
+            handler.container = Mock()
+            handler.client.replay_storage = Mock()
+            yield handler
 
     def test_handle_result_success_replay_disabled(self, handler):
         """ Test that handle_result doesn't set the replay ID
