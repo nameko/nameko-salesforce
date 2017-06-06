@@ -10,12 +10,12 @@ import pytest
 import requests_mock
 
 from nameko_salesforce import constants
-from nameko_salesforce.streaming.client import (
-    StreamingClient,
-    subscribe,
+from nameko_salesforce.streaming import (
+    handle_sobject_notification,
     handle_notification,
-    handle_sobject_notification
+    subscribe,
 )
+from nameko_salesforce.streaming.client import StreamingClient
 
 
 @pytest.fixture
