@@ -209,7 +209,7 @@ subscribe = MessageHandler.decorator
 class NotificationsClient(StreamingClient):
 
     def setup(self):
-        #config = self.container.config[constants.CONFIG_KEY]
+        # config = self.container.config[constants.CONFIG_KEY]
         config = self.container.config
         self.api_client = push_topics.get_client(config)
 

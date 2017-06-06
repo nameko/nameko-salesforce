@@ -1,4 +1,3 @@
-from functools import partial
 import operator
 
 from cachetools import LRUCache, cachedmethod
@@ -38,10 +37,10 @@ class PushTopicsAPIClient(ClientProxy):
         record_type=None,
         exclude_current_user=False,
         notify_for_fields=constants.NotifyForFields.all_,
-        notify_for_operation_create = True,
-        notify_for_operation_update = True,
-        notify_for_operation_delete = True,
-        notify_for_operation_undelete = True,
+        notify_for_operation_create=True,
+        notify_for_operation_update=True,
+        notify_for_operation_delete=True,
+        notify_for_operation_undelete=True,
     ):
         """
         Update or create Push Topic object notifying given sobject changes
@@ -98,10 +97,10 @@ class PushTopicsAPIClient(ClientProxy):
         name=None,
         query=None,
         notify_for_fields=constants.NotifyForFields.all_,
-        notify_for_operation_create = True,
-        notify_for_operation_update = True,
-        notify_for_operation_delete = True,
-        notify_for_operation_undelete = True,
+        notify_for_operation_create=True,
+        notify_for_operation_update=True,
+        notify_for_operation_delete=True,
+        notify_for_operation_undelete=True,
     ):
         """
         Update or create Push Topic object
@@ -186,8 +185,8 @@ class PushTopicsAPIClient(ClientProxy):
     def get_record_type_id_by_name(self, sobject_type, record_type):
         query = (
             "SELECT Id, DeveloperName, SobjectType "
-             "FROM RecordType WHERE SobjectType = '{}' "
-             "AND DeveloperName = '{}'".format(sobject_type, record_type))
+            "FROM RecordType WHERE SobjectType = '{}' "
+            "AND DeveloperName = '{}'".format(sobject_type, record_type))
         response = self.query(query)
         if response['totalSize'] < 1:
             raise NotFound(

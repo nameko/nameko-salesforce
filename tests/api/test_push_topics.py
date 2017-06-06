@@ -1,7 +1,6 @@
 from mock import patch
 import pytest
 import requests_mock
-from simple_salesforce import SalesforceResourceNotFound
 
 from nameko_salesforce import constants
 from nameko_salesforce.api.client import ClientProxy
@@ -311,7 +310,6 @@ class TestDeclarePushTopic:
 
         """
         name = 'ContactUpdated'
-        query = 'SELECT ...'
 
         client.declare_push_topic(name)
 

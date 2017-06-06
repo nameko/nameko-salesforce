@@ -473,7 +473,6 @@ class TestSobjectNotificationHandler:
             notify_for_operation_delete=True,
             notify_for_operation_undelete=True)
 
-
     def test_declare_push_topic_full_configuration(self, make_handler):
         """ Test fully configured push topic declaration
         """
