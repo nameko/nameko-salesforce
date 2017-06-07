@@ -3,9 +3,11 @@ from contextlib import contextmanager
 from nameko.utils.retry import retry
 import simple_salesforce
 
+from nameko_salesforce import constants
 
-def get_client(config):
-    pool = ClientPool(config)
+
+def get_client(*args, **kwargs):
+    pool = ClientPool(*args, **kwargs)
     return ClientProxy(pool)
 
 
@@ -97,8 +99,15 @@ class ClientPool(object):
     for example if they discover that the client's session has expired.
     """
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(
+        self, username, password, security_token,
+        sandbox=False, api_version=None
+    ):
+        self.username = username
+        self.password = password
+        self.security_token = security_token
+        self.sandbox = sandbox
+        self.api_version = api_version or constants.DEFAULT_API_VERSION
         self.free = set()
         self.busy = set()
 
@@ -121,11 +130,11 @@ class ClientPool(object):
 
     def create(self):
         client = simple_salesforce.Salesforce(
-            username=self.config['SALESFORCE']['USERNAME'],
-            password=self.config['SALESFORCE']['PASSWORD'],
-            security_token=self.config['SALESFORCE']['SECURITY_TOKEN'],
-            sandbox=self.config['SALESFORCE']['SANDBOX'],
-            version=self.config['SALESFORCE']['API_VERSION'],
+            username=self.username,
+            password=self.password,
+            security_token=self.security_token,
+            sandbox=self.sandbox,
+            version=self.api_version,
         )
         return client
 

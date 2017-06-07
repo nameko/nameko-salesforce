@@ -13,9 +13,9 @@ class NotFound(LookupError):
     pass
 
 
-def get_client(config):
-    pool = ClientPool(config)
-    return PushTopicsAPIClient(config, pool)
+def get_client(*args, **kwargs):
+    pool = ClientPool(*args, **kwargs)
+    return PushTopicsAPIClient(pool)
 
 
 class PushTopicsAPIClient(ClientProxy):
@@ -26,9 +26,8 @@ class PushTopicsAPIClient(ClientProxy):
 
     NotFound = NotFound
 
-    def __init__(self, config, pool):
+    def __init__(self, pool):
         self.cache = LRUCache(maxsize=100)
-        self.config = config
         super().__init__(pool)
 
     def declare_push_topic_for_sobject(
@@ -75,7 +74,7 @@ class PushTopicsAPIClient(ClientProxy):
                 "RecordTypeId = '{}'".format(record_type_id))
         if exclude_current_user:
             current_user_id = self.get_user_id_by_name(
-                self.config['SALESFORCE']['USERNAME'])
+                self.pool.username)
             conditions.append(
                 "LastModifiedById != '{}'".format(current_user_id))
 
@@ -147,7 +146,7 @@ class PushTopicsAPIClient(ClientProxy):
         push_topic_data = {
             'Name': name,
             'Query': query,
-            'ApiVersion': self.config['SALESFORCE']['API_VERSION'],
+            'ApiVersion': self.pool.api_version,
             'NotifyForOperationCreate': notify_for_operation_create,
             'NotifyForOperationUpdate': notify_for_operation_update,
             'NotifyForOperationDelete': notify_for_operation_delete,

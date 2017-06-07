@@ -4,6 +4,9 @@ from enum import Enum
 CONFIG_KEY = 'SALESFORCE'
 
 
+DEFAULT_API_VERSION = '37.0'
+
+
 DEFAULT_REPLAY_STORAGE_TTL = 60 * 60 * 12
 
 

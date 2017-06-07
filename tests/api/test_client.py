@@ -10,7 +10,13 @@ from nameko_salesforce.api.client import get_client
 
 @pytest.fixture
 def client(config):
-    return get_client(config)
+    return get_client(
+        username=config['SALESFORCE']['USERNAME'],
+        password=config['SALESFORCE']['PASSWORD'],
+        security_token=config['SALESFORCE']['SECURITY_TOKEN'],
+        sandbox=config['SALESFORCE']['SANDBOX'],
+        api_version=config['SALESFORCE']['SANDBOX'],
+    )
 
 
 @pytest.fixture

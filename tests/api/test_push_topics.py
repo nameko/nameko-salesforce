@@ -9,7 +9,13 @@ from nameko_salesforce.api.push_topics import get_client, PushTopicsAPIClient
 
 @pytest.fixture
 def client(config):
-    return get_client(config)
+    return get_client(
+        username=config['SALESFORCE']['USERNAME'],
+        password=config['SALESFORCE']['PASSWORD'],
+        security_token=config['SALESFORCE']['SECURITY_TOKEN'],
+        sandbox=config['SALESFORCE']['SANDBOX'],
+        api_version=config['SALESFORCE']['SANDBOX'],
+    )
 
 
 @pytest.fixture

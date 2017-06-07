@@ -33,7 +33,7 @@ class StreamingClient(BayeuxClient):
 
         """
 
-        self.api_version = '37.0'
+        self.api_version = constants.DEFAULT_API_VERSION
         """ Salesforce server API version
         """
 
