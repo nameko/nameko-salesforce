@@ -123,7 +123,6 @@ class TestSalesforceAPIEndToEnd:
         with requests_mock.Mocker() as mocked_requests:
             yield mocked_requests
 
-
     @pytest.fixture(autouse=True)
     def mock_salesforce_login(self):
         with patch('simple_salesforce.api.SalesforceLogin') as SalesforceLogin:
