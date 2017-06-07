@@ -1,3 +1,7 @@
+.. image:: https://travis-ci.org/Overseas-Student-Living/nameko-salesforce.svg?branch=extract-from-internal-salesforce-lib
+    :target: https://travis-ci.org/Overseas-Student-Living/nameko-salesforce
+
+
 =================
 Nameko Salesforce
 =================
@@ -6,7 +10,7 @@ This library contains a `Nameko`_ extension which acts as a client to `Salesforc
 and a `Nameko`_ dependency for easy communication with `Salesforce REST API`_.
 
 The Streaming API extension is based on `Nameko Cometd Bayeux Client`_ and the REST API dependency
-id based on `Simple Salesforce`.
+id based on `Simple Salesforce`_.
 
 .. _Nameko: http://nameko.readthedocs.org
 
@@ -150,14 +154,45 @@ More notification options:
         def handle_contact_updates(self, topic, event):
             """ Handle Salesforce student contacts name changes
             
-            Handles only first and last name changes of existing contacts
-            of type of student. Ignores any other modification.
+            Handles only name changes of existing contacts of type of student.
+            Ignores any other modification.
             
             Also ignores changes done by this service (more precisely changes
             done by the same API user as this extension use for connection
             to Salesforce streaming API).
 
             """
+
+Message Durability
+------------------
+
+The streaming API extension allows you to track last received replay IDs
+for each topic and use it on subscription to ask Salesforce to replay all
+missed events from that point.
+
+Salesforce calls this mechanism "Replaying PushTopic Streaming Events".
+For more information about durable events, see `Message Durability`_.
+
+.. _Message Durability:
+    https://developer.salesforce.com/docs/atlas.en-us.api_streaming.meta/api_streaming/using_streaming_api_durability.htm
+
+The streaming API extension extension has the ability to persist replay IDs
+in Redis and load them when subscribing to channels. To enable the replay
+mechanism add the following keys to your Nameko configuration:
+
+.. code-block:: yaml
+
+    # config.yaml
+
+    SALESFORCE:
+        ...
+        PUSHTOPIC_REPLAY_ENABLED: True
+        PUSHTOPIC_REPLAY_REDIS_URI: redis://some.redis.host:6379/11
+        PUSHTOPIC_REPLAY_TTL: 3600
+
+Salesforce promises to keep events for 24 hours, however we noticed that the
+real maximum retention window is smaller and that Salesforce sometimes
+complains about invalid replay IDs even after only 18 hours.
 
 
 Salesforce API Dependency
