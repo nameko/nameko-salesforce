@@ -6,9 +6,12 @@ python:
   - "3.6"
   - nightly
 
+services:
+  - redis-server
+
 install:
-    - pip install -U pip setuptools
-    - pip install -U -e ".[dev]"
+  - pip install -U pip setuptools
+  - pip install -U -e ".[dev]"
 
 script:
   - make test
