@@ -44,7 +44,7 @@ class TestStreamingClientSetup:
         assert client.security_token == config['SALESFORCE']['SECURITY_TOKEN']
         assert client.sandbox == config['SALESFORCE']['SANDBOX']
 
-    def test_setup_main_config_key_failure(self, container):
+    def test_setup_main_config_key_missing(self, container):
 
         container.config.pop('SALESFORCE')
 
@@ -79,7 +79,7 @@ class TestStreamingClientSetup:
     @pytest.mark.parametrize(
         'key', ('USERNAME', 'PASSWORD', 'SECURITY_TOKEN', 'SANDBOX')
     )
-    def test_setup_main_config_key_failures(self, container, key):
+    def test_setup_config_keys_missing(self, container, key):
 
         container.config[constants.CONFIG_KEY].pop(key)
 
