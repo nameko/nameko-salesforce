@@ -25,7 +25,11 @@ setup(
             "pylint==1.7.1",
             "pytest==3.0.6",
             "requests-mock==1.3.0",
-        ]
+        ],
+        'docs': [
+            'Sphinx==1.6.2',
+            'sphinx-rtd-theme==0.2.4',
+        ],
     },
     dependency_links=[],
     zip_safe=True,

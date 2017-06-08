@@ -5,8 +5,8 @@
 Nameko Salesforce
 =================
 
-This library contains a `Nameko`_ extension which acts as a client to `Salesforce Streaming API`_
-and a `Nameko`_ dependency for easy communication with `Salesforce REST API`_.
+A `Nameko`_ extension with entrypoints for handling `Salesforce Streaming API`_ events
+and a dependency provider for easy communication with `Salesforce REST API`_.
 
 The Streaming API extension is based on `Nameko Cometd Bayeux Client`_ and the REST API dependency
 id based on `Simple Salesforce`_.
