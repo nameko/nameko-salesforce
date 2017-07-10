@@ -45,7 +45,7 @@ class PushTopicsAPIClient(ClientProxy):
         Update or create Push Topic object notifying given sobject changes
 
         :sobject_type:
-            Name of the Salesforce obuject (e.g. Contact, Task, ...)
+            Name of the Salesforce object (e.g. Contact, Task, ...)
 
         :record_type:
             Optional record type name filtering notifications for a subset

@@ -19,7 +19,7 @@ def get_client(*args, **kwargs):
 
 class MethodProxy(object):
     """
-    A proxy to an method inside a :class:`~simple_salesforce.Salesforce`
+    A proxy to a method inside a :class:`~simple_salesforce.Salesforce`
     client.
 
     Fetches and then invokes a method from a client that is checked out of
@@ -30,6 +30,7 @@ class MethodProxy(object):
     and via a "resource" attribute, so the method may be on the client
     or a resource within it. The method to invoke is fetched by calling
     :attr:`self.get_method_ref`.
+
     """
 
     def __init__(self, pool, get_method_ref):
@@ -56,10 +57,11 @@ class ClientAttributeProxy(MethodProxy):
     client.
 
     Since `Salesforce` clients support querying via a "resource"
-    attribute, our `__getattr__` returns a `MethodProxy` for that resource.
+    attribute, our `__getattr__` returns a ``MethodProxy`` for that resource.
 
     Otherwise, if the attribute is a method it can be invoked directly via
     the `__call__` method inherited from :class:`MethodProxy`.
+
     """
 
     def __init__(self, attr_name, *args):
@@ -83,6 +85,7 @@ class ClientProxy(object):
 
     In combination with :class:`MethodProxy`, methods are invoked on
     a client that is first checked out of a pool.
+
     """
 
     def __init__(self, pool):
@@ -103,6 +106,7 @@ class ClientPool(object):
 
     Allows callers to discard clients that are checked out of the pool,
     for example if they discover that the client's session has expired.
+
     """
 
     def __init__(
