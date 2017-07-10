@@ -1,4 +1,4 @@
-from mock import patch
+from mock import Mock, patch
 from nameko.containers import ServiceContainer
 from nameko.exceptions import ConfigurationError
 from nameko.testing.services import dummy
@@ -110,7 +110,7 @@ class TestSalesforceAPIUnit:
     def test_get_dependency(self, config, make_salesforce_api_provider):
         salesforce_api_provider = make_salesforce_api_provider()
         salesforce_api_provider.setup()
-        worker_ctx = {}
+        worker_ctx = Mock()
         assert (
             salesforce_api_provider.get_dependency(worker_ctx) ==
             salesforce_api_provider.client)
