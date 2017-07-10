@@ -105,8 +105,8 @@ class PushTopicsAPIClient(ClientProxy):
         Update or create Push Topic object
 
         Note that the update or create operation is not atomic and there
-        is a race condition with multiple services trying to declare the topic
-        at the same time.
+        is a race condition with multiple services trying to create the same
+        topic at the same time.
 
         :params name:
             Descriptive name of the Push Topic object to create,
