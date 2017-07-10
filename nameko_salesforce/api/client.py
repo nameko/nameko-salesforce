@@ -7,6 +7,12 @@ from nameko_salesforce import constants
 
 
 def get_client(*args, **kwargs):
+    """
+    Return a :class:`~simple_salesforce.Salesforce` client-like object but
+    backed by a :class:`ClientPool` to avoid authenticating on every request.
+    Use as you would a normal :class:`~simple_salesforce.Salesforce` Client.
+
+    """
     pool = ClientPool(*args, **kwargs)
     return ClientProxy(pool)
 
