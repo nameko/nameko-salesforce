@@ -66,7 +66,7 @@ class StreamingClient(BayeuxClient):
         self.replay_enabled = False
         """ PushTopic Events tracking enabled
 
-        If set to ``True``, the client will persist last event Reply ID for
+        If set to ``True``, the client will persist last event Replay ID for
         each channel and use it when subscribing to immediately receive events
         missed during the retention window.
 
@@ -80,10 +80,11 @@ class StreamingClient(BayeuxClient):
         """
 
         self.replay_storage_ttl = constants.DEFAULT_REPLAY_STORAGE_TTL
-        """ Time to live for persisted PushTopic Reply IDs
+        """ Time to live for persisted PushTopic Replay IDs
 
         Salesforce promises to keep events for 24 hours, therefore the TTL
-        value must not exceed it.
+        value must not exceed it. Subscription will fail on Replay IDs older
+        than 24 hours.
 
         """
 
