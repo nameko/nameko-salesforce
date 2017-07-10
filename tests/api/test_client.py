@@ -32,7 +32,7 @@ def mock_salesforce_login():
         yield
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def fast_retry():
     def no_sleep(period):
         eventlet.sleep(0)
