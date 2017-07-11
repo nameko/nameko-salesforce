@@ -85,7 +85,7 @@ class PushTopicsAPIClient(ClientProxy):
             name = sobject_type
 
         query = (
-            "SELECT Id, Name, LastModifiedById, LastModifiedDate FROM {}"
+            "SELECT Id, LastModifiedById, LastModifiedDate FROM {}"
             .format(sobject_type))
 
         conditions = []

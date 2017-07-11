@@ -371,22 +371,22 @@ class TestDeclarePushTopic:
         (
             (
                 None, False,
-                ("SELECT Id, Name, LastModifiedById, LastModifiedDate "
+                ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact"),
             ),
             (
                 'Student', False,
-                ("SELECT Id, Name, LastModifiedById, LastModifiedDate "
+                ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact WHERE RecordTypeId = '00..A0'"),
             ),
             (
                 None, True,
-                ("SELECT Id, Name, LastModifiedById, LastModifiedDate "
+                ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact WHERE LastModifiedById != '11..A1'"),
             ),
             (
                 'Student', True,
-                ("SELECT Id, Name, LastModifiedById, LastModifiedDate "
+                ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact WHERE RecordTypeId = '00..A0' "
                  "AND LastModifiedById != '11..A1'"),
             ),
