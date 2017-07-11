@@ -33,6 +33,7 @@ class PushTopicsAPIClient(ClientProxy):
     def declare_push_topic_for_sobject(
         self,
         sobject_type,
+        sobject_fields=None,
         record_type=None,
         exclude_current_user=False,
         notify_for_fields=constants.NotifyForFields.all_,
@@ -46,6 +47,11 @@ class PushTopicsAPIClient(ClientProxy):
 
         :sobject_type:
             Name of the Salesforce object (e.g. Contact, Task, ...)
+
+        :sobject_fields:
+            List of field names for the SELECT clause defining sobject fields
+            to be sent in the notification.
+            Defaults to ``('Id', 'LastModifiedById', 'LastModifiedDate')``.
 
         :record_type:
             Optional record type name filtering notifications for a subset
@@ -84,9 +90,10 @@ class PushTopicsAPIClient(ClientProxy):
         else:
             name = sobject_type
 
-        query = (
-            "SELECT Id, LastModifiedById, LastModifiedDate FROM {}"
-            .format(sobject_type))
+        fields = sobject_fields or (
+            'Id', 'LastModifiedById', 'LastModifiedDate')
+
+        query = 'SELECT {} FROM {}'.format(', '.join(fields), sobject_type)
 
         conditions = []
         if record_type:

@@ -413,7 +413,7 @@ class TestSobjectNotificationHandler:
     def test_channel_name(
         self, make_handler, sobject_type, record_type, expected_channel_name
     ):
-        handler = make_handler(sobject_type, record_type)
+        handler = make_handler(sobject_type, record_type=record_type)
         assert handler.channel_name == expected_channel_name
 
     def test_handle_message(self, make_handler):
@@ -423,7 +423,7 @@ class TestSobjectNotificationHandler:
         sobject_type = 'Contact'
         record_type = 'Student'
 
-        handler = make_handler(sobject_type, record_type)
+        handler = make_handler(sobject_type, record_type=record_type)
 
         replay_id = '001122'
         message = {'sobject': 'spam', 'event': {'replayId': replay_id}}
@@ -465,7 +465,8 @@ class TestSobjectNotificationHandler:
 
         assert api_client.declare_push_topic_for_sobject.call_args == call(
             sobject_type,
-            None,
+            sobject_fields=None,
+            record_type=None,
             exclude_current_user=True,
             notify_for_fields=constants.NotifyForFields.all_,
             notify_for_operation_create=True,
@@ -477,6 +478,7 @@ class TestSobjectNotificationHandler:
         """ Test fully configured push topic declaration
         """
 
+        sobject_fields = ('Id', 'Name')
         sobject_type = 'Contact'
         record_type = 'Student'
         exclude_current_user = False
@@ -488,7 +490,8 @@ class TestSobjectNotificationHandler:
 
         handler = make_handler(
             sobject_type,
-            record_type,
+            sobject_fields=sobject_fields,
+            record_type=record_type,
             exclude_current_user=exclude_current_user,
             notify_for_fields=constants.NotifyForFields.referenced,
             notify_for_operation_create=notify_for_operation_create,
@@ -502,7 +505,8 @@ class TestSobjectNotificationHandler:
 
         assert api_client.declare_push_topic_for_sobject.call_args == call(
             sobject_type,
-            record_type,
+            sobject_fields=sobject_fields,
+            record_type=record_type,
             exclude_current_user=exclude_current_user,
             notify_for_fields=notify_for_fields,
             notify_for_operation_create=notify_for_operation_create,

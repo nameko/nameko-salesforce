@@ -339,7 +339,8 @@ class TestDeclarePushTopic:
         push topic object and for an update of existing one.
 
         """
-        client.declare_push_topic_for_sobject(sobject_type, record_type)
+        client.declare_push_topic_for_sobject(
+            sobject_type, record_type=record_type)
 
         request = write_push_topic.request_history[0]
         assert request.json()['Name'] == expected_name
@@ -367,35 +368,42 @@ class TestDeclarePushTopic:
         assert request.json()['Query'] == query
 
     @pytest.mark.parametrize(
-        ('record_type', 'exclude_current_user', 'expected_query'),
+        (
+            'sobject_fields', 'record_type', 'exclude_current_user',
+            'expected_query'
+        ),
         (
             (
-                None, False,
+                None, None, False,
                 ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact"),
             ),
             (
-                'Student', False,
+                None, 'Student', False,
                 ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact WHERE RecordTypeId = '00..A0'"),
             ),
             (
-                None, True,
+                None, None, True,
                 ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact WHERE LastModifiedById != '11..A1'"),
             ),
             (
-                'Student', True,
+                None, 'Student', True,
                 ("SELECT Id, LastModifiedById, LastModifiedDate "
                  "FROM Contact WHERE RecordTypeId = '00..A0' "
                  "AND LastModifiedById != '11..A1'"),
             ),
+            (
+                ('Id', 'Name'), None, False,
+                "SELECT Id, Name FROM Contact",
+            )
         )
     )
     def test_push_topic_query_for_sobject(
         self, get_record_type_id_by_name, get_user_id_by_name,
         client, write_push_topic,
-        record_type, exclude_current_user, expected_query
+        sobject_fields, record_type, exclude_current_user, expected_query
     ):
         """ Test push topic query definition for sObject
 
@@ -409,7 +417,9 @@ class TestDeclarePushTopic:
         get_user_id_by_name.return_value = '11..A1'
 
         client.declare_push_topic_for_sobject(
-            sobject_type, record_type,
+            sobject_type,
+            sobject_fields=sobject_fields,
+            record_type=record_type,
             exclude_current_user=exclude_current_user)
 
         request = write_push_topic.request_history[0]

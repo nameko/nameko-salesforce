@@ -280,6 +280,7 @@ class SobjectNotificationHandler(MessageHandler):
     def __init__(
         self,
         sobject_type,
+        sobject_fields=None,
         record_type=None,
         declare=True,
         exclude_current_user=True,
@@ -291,6 +292,7 @@ class SobjectNotificationHandler(MessageHandler):
     ):
 
         self.sobject_type = sobject_type
+        self.sobject_fields = sobject_fields
         self.record_type = record_type
         self.exclude_current_user = exclude_current_user
 
@@ -320,7 +322,8 @@ class SobjectNotificationHandler(MessageHandler):
             return
         api_client.declare_push_topic_for_sobject(
             self.sobject_type,
-            self.record_type,
+            sobject_fields=self.sobject_fields,
+            record_type=self.record_type,
             exclude_current_user=self.exclude_current_user,
             notify_for_fields=self.notify_for_fields,
             notify_for_operation_create=self.notify_for_operation_create,
