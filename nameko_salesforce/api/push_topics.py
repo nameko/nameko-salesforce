@@ -55,6 +55,26 @@ class PushTopicsAPIClient(ClientProxy):
             Exclude changes done by the same user as this extension uses to
             connect to the Salesforce API. Defaults to ``False``.
 
+        :params notify_for_fields:
+            Specifies which fields are evaluated to generate a notification.
+            See :class:`~.constants.NotifyForFields` for valid options.
+
+        :params notify_for_operation_create:
+            ``True`` if a create operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
+        :params notify_for_operation_update:
+            ``True`` if an update operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
+        :params notify_for_operation_delete:
+            ``True`` if a delete operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
+        :params notify_for_operation_undelete:
+            ``True`` if an undelete operation should generate a notification,
+            otherwise, ``False``. Defaults to ``True``.
+
         """
 
         if record_type:
