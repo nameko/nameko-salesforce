@@ -184,10 +184,15 @@ class MessageHandler(BayeuxMessageHandler):
     client = StreamingClient()
 
     def handle_message(self, message):
+
         args, kwargs = self.get_worker_args(message)
-        context_data = {}
 
         replay_id = message['event']['replayId']
+
+        context_data = {
+            constants.CLIENT_ID_CONTEXT_KEY: self.client.client_id,
+            constants.REPLAY_ID_CONTEXT_KEY: replay_id,
+        }
 
         self.container.spawn_worker(
             self, args, kwargs, context_data=context_data,
