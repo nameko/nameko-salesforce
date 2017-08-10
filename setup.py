@@ -12,16 +12,24 @@ setup(
     url='http://github.com/iky/nameko-salesforce',
     py_modules=['nameko_salesforce'],
     install_requires=[
+        "cachetools==2.0.0",
         "nameko>=2.5.1",
+        "nameko-bayeux-client==0.0.1",
+        "redis==2.10.5",
+        "simple-salesforce==0.72.2",
     ],
     extras_require={
         'dev': [
             "coverage==4.3.4",
-            "flake8==3.2.1",
-            "pylint==1.6.5",
+            "flake8==3.3.0",
+            "pylint==1.7.1",
             "pytest==3.0.6",
             "requests-mock==1.3.0",
-        ]
+        ],
+        'docs': [
+            'Sphinx==1.6.2',
+            'sphinx-rtd-theme==0.2.4',
+        ],
     },
     dependency_links=[],
     zip_safe=True,
