@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name='nameko-salesforce',
@@ -10,7 +10,7 @@ setup(
     ),
     author='Student.com',
     url='http://github.com/iky/nameko-salesforce',
-    py_modules=['nameko_salesforce'],
+    packages=find_packages(exclude=['test', 'test.*']),
     install_requires=[
         "cachetools==2.0.0",
         "nameko>=2.5.1",
