@@ -5,8 +5,8 @@ Salesforce Rest API Client
 
 .. _dependencies:
 
-Nameko Dependency
------------------
+Nameko Dependency Provider
+--------------------------
 
 The ``SalesforceAPI`` dependency provider wraps Simple Salesforce client plus
 brings additional benefits of **client pooling** and :ref:`connection setup <configuration>`

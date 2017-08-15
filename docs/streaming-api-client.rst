@@ -74,9 +74,9 @@ with subscription:
             """ Handle Salesforce contacts updates
             """
 
-If a Push Topic with the same name name already exist, it will be updated.
+If a Push Topic with the same name already exist, it will be updated.
 
-There are more options available for defining a Push Topics:
+There are more options available for defining Push Topics:
 
 .. code-block:: python
 
@@ -155,12 +155,14 @@ down the query filters by selecting objects of a specific Salesforce `RecordType
 .. _RecordType:
     https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_objects_recordtype.htm
 
-In addition to that, there is also ``exclude_current_user`` argument which
-filters out notifications about changes done by the same user as the one
-the entrypoint uses to connect to Salesforce server. You may find this filter
-useful when listening to changes which may be also done by the Salesforce API
-dependency of the same service and you want to avoid circular handling (see the
-:ref:`quick-start` example).
+.. tip::
+
+    In addition to type filters there is also ``exclude_current_user`` argument
+    which filters out notifications about changes done by the same user as the one
+    the entrypoint uses to connect to Salesforce server. You may find this filter
+    useful when listening to changes which may be also done by the Salesforce API
+    dependency of the same service and you want to avoid circular handling (see the
+    :ref:`quick-start` example).
 
 The following example shows available notification options:
 
@@ -197,9 +199,10 @@ The following example shows available notification options:
 
             """
 
-Note that this excludes changes which do not satisfy the defined conditions
-already in Salesforce on the Push Topic level and the server send to clients
-notifications only for relevant changes.
+Note that the entrypoint decorator creates a Push Topic in Salesforce which
+will exclude changes not satisfying the defined conditions already in
+Salesforce. Therefore the server will send to clients notifications only
+for relevant changes.
 
 
 .. _message-durability:
