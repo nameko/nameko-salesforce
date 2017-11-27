@@ -8,6 +8,11 @@ from urllib3.util.retry import Retry
 from nameko_salesforce import constants
 
 
+CONNECT_RETRIES = 5
+READ_RETRIES = 3
+REDIRECT_RETRIES = 5
+
+
 def get_client(*args, **kwargs):
     """
     Return a :class:`~simple_salesforce.Salesforce` client-like object but
@@ -143,7 +148,11 @@ class ClientPool(object):
     def create(self):
         session = requests.Session()
         retry_adapter = requests.adapters.HTTPAdapter(
-            max_retries=Retry(connect=5, read=3, redirect=5)
+            max_retries=Retry(
+                connect=CONNECT_RETRIES,
+                read=READ_RETRIES,
+                redirect=REDIRECT_RETRIES
+            )
         )
         session.mount('http://', retry_adapter)
         session.mount('https://', retry_adapter)
