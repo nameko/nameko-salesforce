@@ -40,7 +40,13 @@ def fast_retry():
         yield
 
 
-def test_proxy(client,  mock_salesforce_server):
+def test_retry_adapter(client):
+    # verify retry adapter is applied to session
+    assert client.session.get_adapter('http://foo').max_retries.read == 3
+    assert client.session.get_adapter('https://bar').max_retries.read == 3
+
+
+def test_proxy(client, mock_salesforce_server):
     requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],
