@@ -1,9 +1,16 @@
 from contextlib import contextmanager
 
-from nameko.utils.retry import retry
+import requests
 import simple_salesforce
+from nameko.utils.retry import retry
+from urllib3.util.retry import Retry
 
 from nameko_salesforce import constants
+
+
+CONNECT_RETRIES = 5
+READ_RETRIES = 3
+REDIRECT_RETRIES = 5
 
 
 def get_client(*args, **kwargs):
@@ -139,12 +146,24 @@ class ClientPool(object):
                 pass  # client was discarded
 
     def create(self):
+        session = requests.Session()
+        retry_adapter = requests.adapters.HTTPAdapter(
+            max_retries=Retry(
+                connect=CONNECT_RETRIES,
+                read=READ_RETRIES,
+                redirect=REDIRECT_RETRIES
+            )
+        )
+        session.mount('http://', retry_adapter)
+        session.mount('https://', retry_adapter)
+
         client = simple_salesforce.Salesforce(
             username=self.username,
             password=self.password,
             security_token=self.security_token,
             sandbox=self.sandbox,
             version=self.api_version,
+            session=session
         )
         return client
 
