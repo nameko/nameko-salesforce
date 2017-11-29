@@ -8,6 +8,7 @@ setup(
         'Nameko extension for easy communication with Salesforce '
         '(Including Streaming API)'
     ),
+    long_description=open('README.rst').read(),
     author='Student.com',
     author_email='wearehiring@student.com',
     url='http://github.com/iky/nameko-salesforce',
