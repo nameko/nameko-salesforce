@@ -9,6 +9,7 @@ setup(
         '(Including Streaming API)'
     ),
     author='Student.com',
+    author_email='wearehiring@student.com',
     url='http://github.com/iky/nameko-salesforce',
     packages=find_packages(exclude=['test', 'test.*']),
     install_requires=[
