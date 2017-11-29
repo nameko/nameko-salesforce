@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 1.0.1
+-------------
+
+Released 2017-11-29
+
+* Use a requests session that retries on (some) errors
+
 Version 1.0.0
 -------------
 
