@@ -19,3 +19,19 @@ install:
 
 script:
   - make test
+
+deploy:
+
+  - provider: pypi
+
+    on:
+      tags: true
+      repo: Overseas-Student-Living/nameko-salesforce
+      condition: $TRAVIS_PYTHON_VERSION = "3.5"
+
+    distributions: "sdist bdist_wheel"
+
+    user: iky
+    password:
+      secure:
+         "wuKi/py9bNikglURovrTIE4WcsSmPHW9rsA7ZnehNi6BHoDx/ZFh4P96P120L+ZvgYJbaZFzlZIfysydiCxjsSekHrArEUSdZJsdcFX6jJRcO03RYi6jr2cA5TrD0jTS5WvWCgYdPsD0oZHTCFyamuJiAx3+INjrPN0mNow0QPLgR7FqCP4Ka19XI/vlCCtysseVaP7vMy8puG3OY+hpR0k5DA7qnNrNYkOF2lPtTUx7Oh/IqmjTGSN1IqHrslRaS82/mezYGCm6YmwoGIXs5kBXqKjJ0hQevL/Ps7/rMlValxe6ei5JQG7J9aONDWenPTNWkVO0gMGrQIunaQzsycQY89ZN8ivafGpGsTOe5AkR4jR4m93rOuj1q0SFGdc2jeoIj2pgTLneRb8b6y1zEWLtnaiwRbmY7PPUINVem+hGm16qTe+BAeQzgtuVRcu8V4/JTL+jEwwwtmtuG3+Kvfs7xVcmGUDhZOCrqRQQ8gntsgCNsI1hw+1EzWlPV4e6+ixk9jXFx/LmUG73BXlmxhjCSdKNjjLaN1Qt5E4ph+xUrZJfTqIKDcDBYV6MNuEkctL1bCXyf6sVsch3cfpwStGwygzSm89+TmVEWW7WwdmUgxs+s5E8r8MiWGRzQ2EGtGjMXuPU/JaEN+B4KT0k0zlAhrpjUnff6YMFO/fCmmA="
