@@ -1,43 +1,10 @@
-.. image:: https://travis-ci.org/Overseas-Student-Living/nameko-salesforce.svg?branch=extract-from-internal-salesforce-lib
-    :target: https://travis-ci.org/Overseas-Student-Living/nameko-salesforce
-
-
-Nameko Salesforce
-=================
-
-A `Nameko`_ extension with entrypoints for handling `Salesforce Streaming API`_ events
-and a dependency provider for easy communication with `Salesforce REST API`_.
-
-The Streaming API extension is based on `Nameko Cometd Bayeux Client`_ and the REST API dependency
-id based on `Simple Salesforce`_.
-
-.. _Nameko: http://nameko.readthedocs.org
-
-.. _Salesforce Streaming API:
-    https://developer.salesforce.com/docs/atlas.en-us.api_streaming.meta/api_streaming/intro_stream.htm
-
-.. _Salesforce REST API:
-    https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/intro_what_is_rest_api.htm
-
-.. _Nameko Cometd Bayeux Client:
-    https://github.com/Overseas-Student-Living/nameko-bayeux-client
-
-.. _Simple Salesforce:
-    https://github.com/simple-salesforce/simple-salesforce
-
+.. _quick-start:
 
 Quick Start
 -----------
 
-Install from `PyPI`_::
-
-    pip install nameko-salesforce
-
-.. _PyPI: https://pypi.python.org/pypi/nameko-salesforce
-
-
 Create a service which handles Salesforce Contact objects changes and also
-has an RPC endpoint for creating new Contact objects in Salesforce:
+has an RPC endpoint for creating new Contact objects in Salesforce.
 
 .. code-block:: python
 
@@ -56,7 +23,7 @@ has an RPC endpoint for creating new Contact objects in Salesforce:
         @handle_sobject_notification('Contact', exclude_current_user=False)
         def handle_contact_updates(
             self, sobject_type, record_type, notification
-        ):  
+        ):
         """ Handle Salesforce contacts updates
         """
         print(notification)
@@ -104,7 +71,3 @@ get a notification. In the first shell you'll find the notification printed:
 .. code-block:: console
 
     {'event': {'replayId': 1, 'type': 'created' ...
-
-For more checkout the `documentation`_.
-
-.. _documentation: http://nameko-salesforce.readthedocs.io
