@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 1.0.2
+-------------
+
+Released 2017-11-29
+
+* Sphinx documentation added
+
 Version 1.0.1
 -------------
 
