@@ -259,6 +259,7 @@ class TestMessageHandler:
             handler = MessageHandler(channel_name)
             handler.container = Mock()
             handler.client.replay_storage = Mock()
+            handler.client.client_id = Mock()
             yield handler
 
     def test_handle_message(self, handler, channel_name):
@@ -272,7 +273,12 @@ class TestMessageHandler:
 
         call_args, call_kwargs = handler.container.spawn_worker.call_args
         assert call_args == (handler, (channel_name, message), {})
-        assert call_kwargs['context_data'] == {}
+        assert (
+            call_kwargs['context_data'][constants.CLIENT_ID_CONTEXT_KEY] ==
+            handler.client.client_id)
+        assert (
+            call_kwargs['context_data'][constants.REPLAY_ID_CONTEXT_KEY] ==
+            replay_id)
         assert call_kwargs['handle_result'].func == handler.handle_result
         assert call_kwargs['handle_result'].args == (replay_id,)
 
@@ -290,6 +296,7 @@ class TestNotificationHandler:
                 handler = NotificationHandler(*args, **kwargs)
                 handler.container = Mock()
                 handler.client.replay_storage = Mock()
+                handler.client.client_id = Mock()
                 return handler
             yield _make
 
@@ -312,7 +319,12 @@ class TestNotificationHandler:
 
         call_args, call_kwargs = handler.container.spawn_worker.call_args
         assert call_args == (handler, (name, message), {})
-        assert call_kwargs['context_data'] == {}
+        assert (
+            call_kwargs['context_data'][constants.CLIENT_ID_CONTEXT_KEY] ==
+            handler.client.client_id)
+        assert (
+            call_kwargs['context_data'][constants.REPLAY_ID_CONTEXT_KEY] ==
+            replay_id)
         assert call_kwargs['handle_result'].func == handler.handle_result
         assert call_kwargs['handle_result'].args == (replay_id,)
 
@@ -400,6 +412,7 @@ class TestSobjectNotificationHandler:
                 handler = SobjectNotificationHandler(*args, **kwargs)
                 handler.container = Mock()
                 handler.client.replay_storage = Mock()
+                handler.client.id = Mock()
                 return handler
             yield _make
 
@@ -433,7 +446,12 @@ class TestSobjectNotificationHandler:
         call_args, call_kwargs = handler.container.spawn_worker.call_args
         assert call_args == (
             handler, (sobject_type, record_type, message), {})
-        assert call_kwargs['context_data'] == {}
+        assert (
+            call_kwargs['context_data'][constants.CLIENT_ID_CONTEXT_KEY] ==
+            handler.client.client_id)
+        assert (
+            call_kwargs['context_data'][constants.REPLAY_ID_CONTEXT_KEY] ==
+            replay_id)
         assert call_kwargs['handle_result'].func == handler.handle_result
         assert call_kwargs['handle_result'].args == (replay_id,)
 

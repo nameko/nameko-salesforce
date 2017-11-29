@@ -10,6 +10,12 @@ DEFAULT_API_VERSION = '37.0'
 DEFAULT_REPLAY_STORAGE_TTL = 60 * 60 * 12
 
 
+CLIENT_ID_CONTEXT_KEY = 'client_id'
+
+
+REPLAY_ID_CONTEXT_KEY = 'replay_id'
+
+
 class NotifyForFields(Enum):
     """ Specifies how the records are evaluated against the PushTopic query
     """
