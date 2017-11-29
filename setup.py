@@ -11,7 +11,7 @@ setup(
     long_description=open('README.rst').read(),
     author='Student.com',
     author_email='wearehiring@student.com',
-    url='http://github.com/iky/nameko-salesforce',
+    url='http://github.com/Overseas-Student-Living/nameko-salesforce',
     packages=find_packages(exclude=['test', 'test.*']),
     install_requires=[
         "cachetools==2.0.0",
