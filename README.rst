@@ -29,8 +29,15 @@ id based on `Simple Salesforce`_.
 Quick Start
 -----------
 
+Install from `PyPI`_::
+
+    pip install nameko-salesforce
+
+.. _PyPI: https://pypi.python.org/pypi/nameko-salesforce
+
+
 Create a service which handles Salesforce Contact objects changes and also
-has an RPC endpoint for creating new Contact objects in Salesforce.
+has an RPC endpoint for creating new Contact objects in Salesforce:
 
 .. code-block:: python
 
@@ -97,3 +104,7 @@ get a notification. In the first shell you'll find the notification printed:
 .. code-block:: console
 
     {'event': {'replayId': 1, 'type': 'created' ...
+
+For more checkout the `documentation`_.
+
+.. _documentation: http://nameko-salesforce.readthedocs.io
