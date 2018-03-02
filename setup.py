@@ -24,7 +24,7 @@ setup(
         'dev': [
             "coverage==4.3.4",
             "flake8==3.3.0",
-            "pylint==1.7.1",
+            "pylint==1.8.2",
             "pytest==3.0.6",
             "requests-mock==1.3.0",
         ],
