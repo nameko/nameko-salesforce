@@ -5,7 +5,7 @@ import pytest
 import requests_mock
 from simple_salesforce import SalesforceResourceNotFound
 
-from nameko_salesforce.api.client import get_client
+from nameko_salesforce.api.client import get_client, READ_RETRIES
 
 
 @pytest.fixture
@@ -40,7 +40,14 @@ def fast_retry():
         yield
 
 
-def test_proxy(client,  mock_salesforce_server):
+def test_retry_adapter(client):
+    # verify retry adapter is applied to session
+    reads = READ_RETRIES
+    assert client.session.get_adapter('http://foo').max_retries.read == reads
+    assert client.session.get_adapter('https://bar').max_retries.read == reads
+
+
+def test_proxy(client, mock_salesforce_server):
     requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],

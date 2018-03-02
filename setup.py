@@ -3,13 +3,15 @@ from setuptools import find_packages, setup
 
 setup(
     name='nameko-salesforce',
-    version='0.0.1',
+    version='1.0.2',
     description=(
         'Nameko extension for easy communication with Salesforce '
         '(Including Streaming API)'
     ),
+    long_description=open('README.rst').read(),
     author='Student.com',
-    url='http://github.com/iky/nameko-salesforce',
+    author_email='wearehiring@student.com',
+    url='http://github.com/Overseas-Student-Living/nameko-salesforce',
     packages=find_packages(exclude=['test', 'test.*']),
     install_requires=[
         "cachetools==2.0.0",
