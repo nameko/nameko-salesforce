@@ -14,7 +14,7 @@ setup(
     install_requires=[
         "cachetools==2.0.0",
         "nameko>=2.5.1",
-        "nameko-bayeux-client==0.0.1",
+        "nameko-bayeux-client==1.0.0",
         "redis==2.10.5",
         "simple-salesforce==0.72.2",
     ],
