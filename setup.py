@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='nameko-salesforce',
-    version='1.0.2',
+    version='1.1.0',
     description=(
         'Nameko extension for easy communication with Salesforce '
         '(Including Streaming API)'

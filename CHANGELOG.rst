@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 1.1.0
+-------------
+
+Released 2018-03-02
+
+* Use latest nameko-bayeux-client with handled timeouts
+
 Version 1.0.2
 -------------
 
