@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='nameko-salesforce',
-    version='1.0.2',
+    version='1.1.0',
     description=(
         'Nameko extension for easy communication with Salesforce '
         '(Including Streaming API)'
@@ -16,7 +16,7 @@ setup(
     install_requires=[
         "cachetools==2.0.0",
         "nameko>=2.5.1",
-        "nameko-bayeux-client==0.0.1",
+        "nameko-bayeux-client==1.0.0",
         "redis==2.10.5",
         "simple-salesforce==0.72.2",
     ],
@@ -24,7 +24,7 @@ setup(
         'dev': [
             "coverage==4.3.4",
             "flake8==3.3.0",
-            "pylint==1.7.1",
+            "pylint==1.8.2",
             "pytest==3.0.6",
             "requests-mock==1.3.0",
         ],
@@ -40,11 +40,10 @@ setup(
         "Programming Language :: Python",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
         "Topic :: Internet",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Intended Audience :: Developers",
