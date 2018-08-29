@@ -2,6 +2,7 @@ import eventlet
 from eventlet.event import Event
 from mock import patch
 import pytest
+import requests
 import requests_mock
 from simple_salesforce import SalesforceResourceNotFound
 
@@ -154,6 +155,39 @@ def test_bad_clients_are_discarded(client, mock_salesforce_server):
     assert _first_client not in client.pool.free
     assert len(client.pool.busy) == 0
     assert len(client.pool.free) == 1
+
+
+@pytest.mark.usefixtures('fast_retry')
+def test_bad_connections_are_discarded(client, mock_salesforce_server):
+
+    # first call is successful; second is session expired; third is successful
+    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
+    response_data = {
+        'errors': [],
+        'id': '003e0000003GuNXAA0',
+        'success': True
+    }
+    mock_salesforce_server.post(
+        requests_mock.ANY,
+        [
+            {'json': response_data},
+            {'exc': requests.exceptions.ConnectionError}
+        ]
+    )
+
+    assert client.Contact.create(requests_data) == response_data
+
+    assert len(client.pool.busy) == 0
+    assert len(client.pool.free) == 1
+    _first_client = list(client.pool.free)[0]
+
+    with pytest.raises(requests.exceptions.ConnectionError):
+        client.Contact.create(requests_data)
+
+    # first client is discarded from the pool
+    assert _first_client not in client.pool.free
+    assert len(client.pool.busy) == 0
+    assert len(client.pool.free) == 0
 
 
 @pytest.mark.usefixtures('fast_retry')
