@@ -160,7 +160,7 @@ def test_bad_clients_are_discarded(client, mock_salesforce_server):
 @pytest.mark.usefixtures('fast_retry')
 def test_bad_connections_are_discarded(client, mock_salesforce_server):
 
-    # first call is successful; second is session expired; third is successful
+    # first call is successful; second is ConnectionError
     requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
     response_data = {
         'errors': [],
