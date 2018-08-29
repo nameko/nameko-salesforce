@@ -32,6 +32,8 @@ class MethodProxy(object):
     Fetches and then invokes a method from a client that is checked out of
     a pool. If the method raises a `SalesforceExpiredSession` the client is
     discarded from the pool and the method is retried on a new client.
+    If `ConnectionError` is raised, the client will be discarded, but the
+    method not automatically retried.
 
     `Salesforce` clients support querying directly with the client
     and via a "resource" attribute, so the method may be on the client
@@ -53,7 +55,10 @@ class MethodProxy(object):
             try:
                 method = self.get_method_ref(client)
                 return method(*args, **kwargs)
-            except simple_salesforce.SalesforceExpiredSession:
+            except (
+                simple_salesforce.SalesforceExpiredSession,
+                requests.exceptions.ConnectionError
+            ):
                 self.pool.discard(client)
                 raise
 
