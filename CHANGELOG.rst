@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 1.1.1
+-------------
+
+Released 2018-08-29
+
+* Discards clients from the pool on ConnectionError
+
 Version 1.1.0
 -------------
 
