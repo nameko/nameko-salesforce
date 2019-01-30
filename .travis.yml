@@ -29,7 +29,7 @@ deploy:
 
     on:
       tags: true
-      repo: Overseas-Student-Living/nameko-salesforce
+      repo: nameko/nameko-salesforce
       condition: $TRAVIS_PYTHON_VERSION = "3.5"
 
     distributions: "sdist bdist_wheel"
