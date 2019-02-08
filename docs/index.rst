@@ -21,7 +21,7 @@ id based on `Simple Salesforce`_.
     https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/intro_what_is_rest_api.htm
 
 .. _Nameko Cometd Bayeux Client:
-    https://github.com/Overseas-Student-Living/nameko-bayeux-client
+    https://github.com/nameko/nameko-bayeux-client
 
 .. _Simple Salesforce:
     https://github.com/simple-salesforce/simple-salesforce
