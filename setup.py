@@ -15,7 +15,7 @@ setup(
     packages=find_packages(exclude=['test', 'test.*']),
     install_requires=[
         "cachetools",
-        "nameko>=2.5.4",
+        "nameko>=2.8.5",
         "nameko-bayeux-client",
         "redis",
         "simple-salesforce>=0.72.2",
