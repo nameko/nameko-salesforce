@@ -1,3 +1,4 @@
+import nameko
 from mock import Mock, patch
 from nameko.containers import ServiceContainer
 from nameko.exceptions import ConfigurationError
@@ -28,12 +29,26 @@ def make_salesforce_api_provider(config):
             def dummy(self):
                 pass
 
-        container = ServiceContainer(Service, config or default_config)
-        containers.append(container)
+        config = config or default_config
+        try:
+            config_patch = nameko.config.patch(config)
+        except AttributeError:  # Nameko 2.X
+            config_patch = None
+            container = ServiceContainer(Service, config)
+        else:  # Nameko 3.X
+            config_patch.start()
+            container = ServiceContainer(Service)
+
+        containers.append((container, config_patch))
 
         return get_extension(container, SalesforceAPI)
 
     yield factory
+
+    for container, config_patch in containers:
+        container.kill()
+        if config_patch:
+            config_patch.stop()
 
     del containers[:]
 
