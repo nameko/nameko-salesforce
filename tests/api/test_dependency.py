@@ -1,8 +1,7 @@
 from mock import Mock, patch
 from nameko.containers import ServiceContainer
 from nameko.exceptions import ConfigurationError
-from nameko.testing.services import dummy
-from nameko.testing.utils import get_extension
+from nameko.testing.services import dummy, entrypoint_hook
 import pytest
 import requests_mock
 
@@ -10,81 +9,60 @@ from nameko_salesforce import constants
 from nameko_salesforce.api import SalesforceAPI
 
 
-@pytest.fixture
-def make_salesforce_api_provider(config):
-
-    containers = []
-    default_config = config
-
-    def factory(config=None):
-
-        class Service(object):
-
-            name = "service"
-
-            salesforce_api = SalesforceAPI()
-
-            @dummy
-            def dummy(self):
-                pass
-
-        container = ServiceContainer(Service, config or default_config)
-        containers.append(container)
-
-        return get_extension(container, SalesforceAPI)
-
-    yield factory
-
-    del containers[:]
-
-
 class TestSalesforceAPIUnit:
 
-    def test_setup(self, config, make_salesforce_api_provider):
+    @pytest.fixture
+    def container(self, config):
+        return Mock(
+            spec=ServiceContainer, config=config, service_name='exampleservice'
+        )
 
-        salesforce_api_provider = make_salesforce_api_provider()
-        salesforce_api_provider.setup()
+    @pytest.fixture
+    def dependency_provider(self, container):
+        return SalesforceAPI().bind(container, 'salesforce_api')
+
+    @pytest.fixture
+    def salesforce_api(self, dependency_provider):
+        dependency_provider.setup()
+        return dependency_provider.get_dependency({})
+
+    def test_setup(self, config, salesforce_api):
 
         salesforce_config = config[constants.CONFIG_KEY]
 
         assert (
-            salesforce_api_provider.client.pool.username ==
+            salesforce_api.client.pool.username ==
             salesforce_config['USERNAME'])
         assert (
-            salesforce_api_provider.client.pool.password ==
+            salesforce_api.client.pool.password ==
             salesforce_config['PASSWORD'])
         assert (
-            salesforce_api_provider.client.pool.security_token ==
+            salesforce_api.client.pool.security_token ==
             salesforce_config['SECURITY_TOKEN'])
         assert (
-            salesforce_api_provider.client.pool.sandbox ==
+            salesforce_api.client.pool.sandbox ==
             salesforce_config['SANDBOX'])
         assert (
-            salesforce_api_provider.client.pool.api_version ==
+            salesforce_api.client.pool.api_version ==
             salesforce_config['API_VERSION'])
 
     def test_setup_default_api_version(
-        self, config, make_salesforce_api_provider
+        self, config, salesforce_api
     ):
         config[constants.CONFIG_KEY].pop('API_VERSION')
 
-        salesforce_api_provider = make_salesforce_api_provider()
-        salesforce_api_provider.setup()
-
         assert (
-            salesforce_api_provider.client.pool.api_version ==
+            salesforce_api.client.pool.api_version ==
             constants.DEFAULT_API_VERSION)
 
     def test_setup_main_config_key_missing(
-        self, config, make_salesforce_api_provider
+        self, config, dependency_provider
     ):
 
         config.pop('SALESFORCE')
 
-        salesforce_api_provider = make_salesforce_api_provider()
-
         with pytest.raises(ConfigurationError) as exc:
-            salesforce_api_provider.setup()
+            dependency_provider.setup()
 
         assert str(exc.value) == '`SALESFORCE` config key not found'
 
@@ -92,28 +70,25 @@ class TestSalesforceAPIUnit:
         'key', ('USERNAME', 'PASSWORD', 'SECURITY_TOKEN', 'SANDBOX')
     )
     def test_setup_config_keys_missing(
-        self, config, make_salesforce_api_provider, key
+        self, config, dependency_provider, key
     ):
 
         config[constants.CONFIG_KEY].pop(key)
 
-        salesforce_api_provider = make_salesforce_api_provider()
-
         with pytest.raises(ConfigurationError) as exc:
-            salesforce_api_provider.setup()
+            dependency_provider.setup()
 
         expected_error = (
             '`{}` configuration does not contain mandatory `{}` key'
             .format(constants.CONFIG_KEY, key))
         assert str(exc.value) == expected_error
 
-    def test_get_dependency(self, config, make_salesforce_api_provider):
-        salesforce_api_provider = make_salesforce_api_provider()
-        salesforce_api_provider.setup()
+    def test_get_dependency(self, config, dependency_provider):
+        dependency_provider.setup()
         worker_ctx = Mock()
         assert (
-            salesforce_api_provider.get_dependency(worker_ctx) ==
-            salesforce_api_provider.client)
+            dependency_provider.get_dependency(worker_ctx) ==
+            dependency_provider.client)
 
 
 class TestSalesforceAPIEndToEnd:
@@ -130,7 +105,7 @@ class TestSalesforceAPIEndToEnd:
             yield
 
     def test_end_to_end(
-        self, config, make_salesforce_api_provider, mock_salesforce_server
+        self, config, container_factory, mock_salesforce_server
     ):
 
         requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
@@ -141,16 +116,21 @@ class TestSalesforceAPIEndToEnd:
         }
         mock_salesforce_server.post(requests_mock.ANY, json=response_data)
 
-        salesforce_api_provider = make_salesforce_api_provider()
-        salesforce_api_provider.setup()
+        class Service(object):
 
-        worker_ctx = {}
+            name = "service"
 
-        salesforce_api = salesforce_api_provider.get_dependency(worker_ctx)
+            salesforce_api = SalesforceAPI()
 
-        result = salesforce_api.Contact.create(requests_data)
+            @dummy
+            def create(self, requests_data):
+                return self.salesforce_api.Contact.create(requests_data)
 
-        assert result == response_data
+        container = container_factory(Service, config)
+        container.start()
+
+        with entrypoint_hook(container, 'create') as create:
+            assert create(requests_data) == response_data
 
         assert (
             mock_salesforce_server.request_history[0].json() ==
