@@ -2,11 +2,11 @@ import operator
 
 from cachetools import LRUCache, cachedmethod
 
-from nameko_salesforce.api.client import ClientPool, ClientProxy
 from nameko_salesforce import constants
+from nameko_salesforce.api.client import ClientPool, ClientProxy
 
 
-cached = cachedmethod(operator.attrgetter('cache'))
+cached = cachedmethod(operator.attrgetter("cache"))
 
 
 class NotFound(LookupError):
@@ -58,29 +58,24 @@ class PushTopicsAPIClient(ClientProxy):
         """
 
         if record_type:
-            name = '{}{}'.format(sobject_type, record_type)
-            record_type_id = self.get_record_type_id_by_name(
-                sobject_type, record_type)
+            name = "{}{}".format(sobject_type, record_type)
+            record_type_id = self.get_record_type_id_by_name(sobject_type, record_type)
         else:
             name = sobject_type
 
-        query = (
-            "SELECT Id, Name, LastModifiedById, LastModifiedDate FROM {}"
-            .format(sobject_type))
+        query = "SELECT Id, Name, LastModifiedById, LastModifiedDate FROM {}".format(
+            sobject_type
+        )
 
         conditions = []
         if record_type:
-            conditions.append(
-                "RecordTypeId = '{}'".format(record_type_id))
+            conditions.append("RecordTypeId = '{}'".format(record_type_id))
         if exclude_current_user:
-            current_user_id = self.get_user_id_by_name(
-                self.pool.username)
-            conditions.append(
-                "LastModifiedById != '{}'".format(current_user_id))
+            current_user_id = self.get_user_id_by_name(self.pool.username)
+            conditions.append("LastModifiedById != '{}'".format(current_user_id))
 
         if conditions:
-            query = '{} WHERE {}'.format(
-                query, ' AND '.join(conditions))
+            query = "{} WHERE {}".format(query, " AND ".join(conditions))
 
         return self.declare_push_topic(
             name=name,
@@ -89,7 +84,8 @@ class PushTopicsAPIClient(ClientProxy):
             notify_for_operation_create=notify_for_operation_create,
             notify_for_operation_update=notify_for_operation_update,
             notify_for_operation_delete=notify_for_operation_delete,
-            notify_for_operation_undelete=notify_for_operation_undelete)
+            notify_for_operation_undelete=notify_for_operation_undelete,
+        )
 
     def declare_push_topic(
         self,
@@ -144,14 +140,14 @@ class PushTopicsAPIClient(ClientProxy):
             notify_for_fields = constants.NotifyForFields(notify_for_fields)
 
         push_topic_data = {
-            'Name': name,
-            'Query': query,
-            'ApiVersion': self.pool.api_version,
-            'NotifyForOperationCreate': notify_for_operation_create,
-            'NotifyForOperationUpdate': notify_for_operation_update,
-            'NotifyForOperationDelete': notify_for_operation_delete,
-            'NotifyForOperationUndelete': notify_for_operation_undelete,
-            'NotifyForFields': notify_for_fields.value,
+            "Name": name,
+            "Query": query,
+            "ApiVersion": self.pool.api_version,
+            "NotifyForOperationCreate": notify_for_operation_create,
+            "NotifyForOperationUpdate": notify_for_operation_update,
+            "NotifyForOperationDelete": notify_for_operation_delete,
+            "NotifyForOperationUndelete": notify_for_operation_undelete,
+            "NotifyForFields": notify_for_fields.value,
         }
 
         try:
@@ -159,36 +155,38 @@ class PushTopicsAPIClient(ClientProxy):
         except NotFound:
             self.PushTopic.create(push_topic_data)
         else:
-            self.PushTopic.update(record['Id'], push_topic_data)
+            self.PushTopic.update(record["Id"], push_topic_data)
 
     @cached
     def get_push_topic_by_name(self, name):
-        query = (
-            "SELECT Id, Name, Query "
-            "FROM PushTopic WHERE Name = '{}'".format(name))
+        query = "SELECT Id, Name, Query " "FROM PushTopic WHERE Name = '{}'".format(
+            name
+        )
         response = self.query(query)
-        if response['totalSize'] < 1:
+        if response["totalSize"] < 1:
             raise NotFound("PushTopic '{}' does not exist".format(name))
-        return response['records'][0]
+        return response["records"][0]
 
     @cached
     def get_user_id_by_name(self, username):
-        query = (
-            "SELECT Id FROM User WHERE Username = '{}'".format(username))
+        query = "SELECT Id FROM User WHERE Username = '{}'".format(username)
         response = self.query(query)
-        if response['totalSize'] < 1:
+        if response["totalSize"] < 1:
             raise NotFound("User '{}' does not exist".format(username))
-        return response['records'][0]['Id']
+        return response["records"][0]["Id"]
 
     @cached
     def get_record_type_id_by_name(self, sobject_type, record_type):
         query = (
             "SELECT Id, DeveloperName, SobjectType "
             "FROM RecordType WHERE SobjectType = '{}' "
-            "AND DeveloperName = '{}'".format(sobject_type, record_type))
+            "AND DeveloperName = '{}'".format(sobject_type, record_type)
+        )
         response = self.query(query)
-        if response['totalSize'] < 1:
+        if response["totalSize"] < 1:
             raise NotFound(
-                "RecordType '{}' of '{}' does not exist"
-                .format(sobject_type, record_type))
-        return response['records'][0]['Id']
+                "RecordType '{}' of '{}' does not exist".format(
+                    sobject_type, record_type
+                )
+            )
+        return response["records"][0]["Id"]

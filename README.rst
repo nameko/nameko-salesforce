@@ -56,7 +56,7 @@ has an RPC endpoint for creating new Contact objects in Salesforce:
         @handle_sobject_notification('Contact', exclude_current_user=False)
         def handle_contact_updates(
             self, sobject_type, record_type, notification
-        ):  
+        ):
         """ Handle Salesforce contacts updates
         """
         print(notification)

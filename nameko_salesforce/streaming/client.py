@@ -1,9 +1,9 @@
-from functools import partial
 import logging
+from functools import partial
 
+import redis
 from nameko.exceptions import ConfigurationError
 from nameko_bayeux_client.client import BayeuxClient, BayeuxMessageHandler
-import redis
 from simple_salesforce.login import SalesforceLogin
 
 from nameko_salesforce import constants
@@ -15,16 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 class StreamingClient(BayeuxClient):
-
     def __init__(self):
 
         super().__init__()
 
-        self.version = '1.0'
+        self.version = "1.0"
         """ Bayeux protocol version
         """
 
-        self.minimum_version = '1.0'
+        self.minimum_version = "1.0"
         """
         Minimum Bayeux protocol version
 
@@ -94,44 +93,48 @@ class StreamingClient(BayeuxClient):
             config = self.container.config[constants.CONFIG_KEY]
         except KeyError:
             raise ConfigurationError(
-                '`{}` config key not found'.format(constants.CONFIG_KEY))
+                "`{}` config key not found".format(constants.CONFIG_KEY)
+            )
 
-        self.version = config.get('BAYEUX_VERSION', self.version)
+        self.version = config.get("BAYEUX_VERSION", self.version)
         self.minimum_version = config.get(
-            'BAYEUX_MINIMUM_VERSION', self.minimum_version)
-        self.api_version = config.get('API_VERSION', self.api_version)
+            "BAYEUX_MINIMUM_VERSION", self.minimum_version
+        )
+        self.api_version = config.get("API_VERSION", self.api_version)
 
         try:
-            self.username = config['USERNAME']
-            self.password = config['PASSWORD']
-            self.security_token = config['SECURITY_TOKEN']
-            self.sandbox = config['SANDBOX']
+            self.username = config["USERNAME"]
+            self.password = config["PASSWORD"]
+            self.security_token = config["SECURITY_TOKEN"]
+            self.sandbox = config["SANDBOX"]
         except KeyError as exc:
             raise ConfigurationError(
-                '`{}` configuration does not contain mandatory '
-                '`{}` key'.format(constants.CONFIG_KEY, exc.args[0])
+                "`{}` configuration does not contain mandatory "
+                "`{}` key".format(constants.CONFIG_KEY, exc.args[0])
             ) from exc
 
-        self.replay_enabled = config.get('PUSHTOPIC_REPLAY_ENABLED', False)
+        self.replay_enabled = config.get("PUSHTOPIC_REPLAY_ENABLED", False)
         if self.replay_enabled:
             self._setup_replay_storage(config)
 
     def _setup_replay_storage(self, config):
         try:
-            redis_uri = config['PUSHTOPIC_REPLAY_REDIS_URI']
+            redis_uri = config["PUSHTOPIC_REPLAY_REDIS_URI"]
         except KeyError:
             raise ConfigurationError(
-                '`{}` must have `PUSHTOPIC_REPLAY_REDIS_URI` defined if '
-                '`PUSHTOPIC_REPLAY_ENABLED` is set to `True`'
-                .format(constants.CONFIG_KEY)
+                "`{}` must have `PUSHTOPIC_REPLAY_REDIS_URI` defined if "
+                "`PUSHTOPIC_REPLAY_ENABLED` is set to `True`".format(
+                    constants.CONFIG_KEY
+                )
             )
         self.replay_storage = redis.StrictRedis.from_url(redis_uri)
         self.replay_storage_ttl = config.get(
-            'PUSHTOPIC_REPLAY_TTL', self.replay_storage_ttl)
+            "PUSHTOPIC_REPLAY_TTL", self.replay_storage_ttl
+        )
 
     def login(self):
 
-        config = self.container.config['SALESFORCE']
+        config = self.container.config["SALESFORCE"]
 
         access_token, host = SalesforceLogin(
             session=None,
@@ -144,9 +147,9 @@ class StreamingClient(BayeuxClient):
 
         self.access_token = access_token
 
-        self.server_uri = 'https://{}/cometd/{}'.format(host, self.api_version)
+        self.server_uri = "https://{}/cometd/{}".format(host, self.api_version)
 
-        logger.info('Logged in to salesforce as %s', config['USERNAME'])
+        logger.info("Logged in to salesforce as %s", config["USERNAME"])
 
     def subscribe(self):
         channel = channels.Subscribe(self)
@@ -160,14 +163,13 @@ class StreamingClient(BayeuxClient):
         self.send_and_handle(subscriptions)
 
     def get_authorisation(self):
-        return 'Bearer', self.access_token
+        return "Bearer", self.access_token
 
     def _format_replay_key(self, channel_name):
-        return 'salesforce:replay_id:{}'.format(channel_name)
+        return "salesforce:replay_id:{}".format(channel_name)
 
     def get_replay_id(self, channel_name):
-        replay_id = self.replay_storage.get(
-            self._format_replay_key(channel_name))
+        replay_id = self.replay_storage.get(self._format_replay_key(channel_name))
         if replay_id:
             return int(replay_id)
 
@@ -187,7 +189,7 @@ class MessageHandler(BayeuxMessageHandler):
 
         args, kwargs = self.get_worker_args(message)
 
-        replay_id = message['event']['replayId']
+        replay_id = message["event"]["replayId"]
 
         context_data = {
             constants.CLIENT_ID_CONTEXT_KEY: self.client.client_id,
@@ -195,8 +197,12 @@ class MessageHandler(BayeuxMessageHandler):
         }
 
         self.container.spawn_worker(
-            self, args, kwargs, context_data=context_data,
-            handle_result=partial(self.handle_result, replay_id))
+            self,
+            args,
+            kwargs,
+            context_data=context_data,
+            handle_result=partial(self.handle_result, replay_id),
+        )
 
     def handle_result(self, replay_id, worker_ctx, result, exc_info):
         if not exc_info and self.client.replay_enabled:
@@ -213,12 +219,18 @@ subscribe = MessageHandler.decorator
 
 
 class NotificationsClient(StreamingClient):
+    def __init__(self):
+        super().__init__()
+        self.api_client = None
 
     def setup(self):
         super().setup()
         self.api_client = push_topics.get_client(
-            self.username, self.password, self.security_token,
-            sandbox=self.sandbox, api_version=self.api_version
+            self.username,
+            self.password,
+            self.security_token,
+            sandbox=self.sandbox,
+            api_version=self.api_version,
         )
 
     def start(self):
@@ -254,7 +266,7 @@ class NotificationHandler(MessageHandler):
 
         self.declare = True if self.query else False
 
-        channel_name = '/topic/{}'.format(name)
+        channel_name = "/topic/{}".format(name)
         super().__init__(channel_name)
 
     def get_worker_args(self, message):
@@ -272,7 +284,8 @@ class NotificationHandler(MessageHandler):
             notify_for_operation_create=self.notify_for_operation_create,
             notify_for_operation_update=self.notify_for_operation_update,
             notify_for_operation_delete=self.notify_for_operation_delete,
-            notify_for_operation_undelete=self.notify_for_operation_undelete)
+            notify_for_operation_undelete=self.notify_for_operation_undelete,
+        )
 
 
 handle_notification = NotificationHandler.decorator
@@ -308,10 +321,10 @@ class SobjectNotificationHandler(MessageHandler):
         self.declare = declare
 
         if self.record_type:
-            topic = '{}{}'.format(sobject_type, record_type)
+            topic = "{}{}".format(sobject_type, record_type)
         else:
             topic = sobject_type
-        channel_name = '/topic/{}'.format(topic)
+        channel_name = "/topic/{}".format(topic)
 
         super().__init__(channel_name)
 
@@ -331,7 +344,8 @@ class SobjectNotificationHandler(MessageHandler):
             notify_for_operation_create=self.notify_for_operation_create,
             notify_for_operation_update=self.notify_for_operation_update,
             notify_for_operation_delete=self.notify_for_operation_delete,
-            notify_for_operation_undelete=self.notify_for_operation_undelete)
+            notify_for_operation_undelete=self.notify_for_operation_undelete,
+        )
 
 
 handle_sobject_notification = SobjectNotificationHandler.decorator

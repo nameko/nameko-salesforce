@@ -8,7 +8,7 @@ class Subscribe(BaseSubscribe):
     def compose(self, channel_name, replay_id=None):
         compose = super(BaseSubscribe, self).compose
         if replay_id:
-            ext = {'replay': {channel_name: replay_id}}
+            ext = {"replay": {channel_name: replay_id}}
             return compose(subscription=channel_name, ext=ext)
         else:
             return compose(subscription=channel_name)

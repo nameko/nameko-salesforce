@@ -4,16 +4,15 @@ import redis
 
 @pytest.fixture
 def config(config):
-    config['SALESFORCE'].update({
-        'BAYEUX_VERSION': '1.0',
-        'BAYEUX_MINIMUM_VERSION': '1.0',
-    })
+    config["SALESFORCE"].update(
+        {"BAYEUX_VERSION": "1.0", "BAYEUX_MINIMUM_VERSION": "1.0"}
+    )
     return config
 
 
 @pytest.fixture
 def redis_uri():
-    return 'redis://localhost:6379/11'
+    return "redis://localhost:6379/11"
 
 
 @pytest.yield_fixture

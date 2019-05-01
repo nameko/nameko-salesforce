@@ -1,22 +1,22 @@
 import eventlet
-from eventlet.event import Event
-from mock import patch
 import pytest
 import requests
 import requests_mock
+from eventlet.event import Event
+from mock import patch
 from simple_salesforce import SalesforceResourceNotFound
 
-from nameko_salesforce.api.client import get_client, READ_RETRIES
+from nameko_salesforce.api.client import READ_RETRIES, get_client
 
 
 @pytest.fixture
 def client(config):
     return get_client(
-        username=config['SALESFORCE']['USERNAME'],
-        password=config['SALESFORCE']['PASSWORD'],
-        security_token=config['SALESFORCE']['SECURITY_TOKEN'],
-        sandbox=config['SALESFORCE']['SANDBOX'],
-        api_version=config['SALESFORCE']['SANDBOX'],
+        username=config["SALESFORCE"]["USERNAME"],
+        password=config["SALESFORCE"]["PASSWORD"],
+        security_token=config["SALESFORCE"]["SECURITY_TOKEN"],
+        sandbox=config["SALESFORCE"]["SANDBOX"],
+        api_version=config["SALESFORCE"]["SANDBOX"],
     )
 
 
@@ -28,8 +28,8 @@ def mock_salesforce_server():
 
 @pytest.fixture(autouse=True)
 def mock_salesforce_login():
-    with patch('simple_salesforce.api.SalesforceLogin') as SalesforceLogin:
-        SalesforceLogin.return_value = 'session_id', 'abc.salesforce.com'
+    with patch("simple_salesforce.api.SalesforceLogin") as SalesforceLogin:
+        SalesforceLogin.return_value = "session_id", "abc.salesforce.com"
         yield
 
 
@@ -37,24 +37,21 @@ def mock_salesforce_login():
 def fast_retry():
     def no_sleep(period):
         eventlet.sleep(0)
-    with patch('nameko.utils.retry.sleep', new=no_sleep):
+
+    with patch("nameko.utils.retry.sleep", new=no_sleep):
         yield
 
 
 def test_retry_adapter(client):
     # verify retry adapter is applied to session
     reads = READ_RETRIES
-    assert client.session.get_adapter('http://foo').max_retries.read == reads
-    assert client.session.get_adapter('https://bar').max_retries.read == reads
+    assert client.session.get_adapter("http://foo").max_retries.read == reads
+    assert client.session.get_adapter("https://bar").max_retries.read == reads
 
 
 def test_proxy(client, mock_salesforce_server):
-    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
-    response_data = {
-        'errors': [],
-        'id': '003e0000003GuNXAA0',
-        'success': True
-    }
+    requests_data = {"LastName": "Smith", "Email": "example@example.com"}
+    response_data = {"errors": [], "id": "003e0000003GuNXAA0", "success": True}
     mock_salesforce_server.post(requests_mock.ANY, json=response_data)
 
     result = client.Contact.create(requests_data)
@@ -66,12 +63,8 @@ def test_proxy(client, mock_salesforce_server):
 
 def test_concurrency(client, mock_salesforce_server):
 
-    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
-    response_data = {
-        'errors': [],
-        'id': '003e0000003GuNXAA0',
-        'success': True
-    }
+    requests_data = {"LastName": "Smith", "Email": "example@example.com"}
+    response_data = {"errors": [], "id": "003e0000003GuNXAA0", "success": True}
 
     class Pact:
         def __init__(self, threshold=2):
@@ -108,12 +101,8 @@ def test_concurrency(client, mock_salesforce_server):
 
 def test_pool_reuses_clients(client, mock_salesforce_server):
 
-    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
-    response_data = {
-        'errors': [],
-        'id': '003e0000003GuNXAA0',
-        'success': True
-    }
+    requests_data = {"LastName": "Smith", "Email": "example@example.com"}
+    response_data = {"errors": [], "id": "003e0000003GuNXAA0", "success": True}
     mock_salesforce_server.post(requests_mock.ANY, json=response_data)
 
     assert client.Contact.create(requests_data) == response_data
@@ -124,23 +113,19 @@ def test_pool_reuses_clients(client, mock_salesforce_server):
     assert len(client.pool.free) == 1
 
 
-@pytest.mark.usefixtures('fast_retry')
+@pytest.mark.usefixtures("fast_retry")
 def test_bad_clients_are_discarded(client, mock_salesforce_server):
 
     # first call is successful; second is session expired; third is successful
-    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
-    response_data = {
-        'errors': [],
-        'id': '003e0000003GuNXAA0',
-        'success': True
-    }
+    requests_data = {"LastName": "Smith", "Email": "example@example.com"}
+    response_data = {"errors": [], "id": "003e0000003GuNXAA0", "success": True}
     mock_salesforce_server.post(
         requests_mock.ANY,
         [
-            {'json': response_data},
-            {'status_code': 401, 'text': 'session expired'},
-            {'json': response_data},
-        ]
+            {"json": response_data},
+            {"status_code": 401, "text": "session expired"},
+            {"json": response_data},
+        ],
     )
 
     assert client.Contact.create(requests_data) == response_data
@@ -157,22 +142,15 @@ def test_bad_clients_are_discarded(client, mock_salesforce_server):
     assert len(client.pool.free) == 1
 
 
-@pytest.mark.usefixtures('fast_retry')
+@pytest.mark.usefixtures("fast_retry")
 def test_bad_connections_are_discarded(client, mock_salesforce_server):
 
     # first call is successful; second is ConnectionError
-    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
-    response_data = {
-        'errors': [],
-        'id': '003e0000003GuNXAA0',
-        'success': True
-    }
+    requests_data = {"LastName": "Smith", "Email": "example@example.com"}
+    response_data = {"errors": [], "id": "003e0000003GuNXAA0", "success": True}
     mock_salesforce_server.post(
         requests_mock.ANY,
-        [
-            {'json': response_data},
-            {'exc': requests.exceptions.ConnectionError}
-        ]
+        [{"json": response_data}, {"exc": requests.exceptions.ConnectionError}],
     )
 
     assert client.Contact.create(requests_data) == response_data
@@ -190,22 +168,15 @@ def test_bad_connections_are_discarded(client, mock_salesforce_server):
     assert len(client.pool.free) == 0
 
 
-@pytest.mark.usefixtures('fast_retry')
+@pytest.mark.usefixtures("fast_retry")
 def test_proxy_retries_on_session_expired(client, mock_salesforce_server):
 
     # first call is session expired; second is success
-    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
-    response_data = {
-        'errors': [],
-        'id': '003e0000003GuNXAA0',
-        'success': True
-    }
+    requests_data = {"LastName": "Smith", "Email": "example@example.com"}
+    response_data = {"errors": [], "id": "003e0000003GuNXAA0", "success": True}
     mock_salesforce_server.post(
         requests_mock.ANY,
-        [
-            {'status_code': 401, 'text': 'session expired'},
-            {'json': response_data},
-        ]
+        [{"status_code": 401, "text": "session expired"}, {"json": response_data}],
     )
 
     # retry succeeds
@@ -216,17 +187,17 @@ def test_proxy_retries_on_session_expired(client, mock_salesforce_server):
     assert len(client.pool.free) == 1
 
 
-@pytest.mark.usefixtures('fast_retry')
+@pytest.mark.usefixtures("fast_retry")
 def test_other_salesforce_errors_are_raised(client, mock_salesforce_server):
 
     # first call is session expired; second is a 404
-    requests_data = {'LastName': 'Smith', 'Email': 'example@example.com'}
+    requests_data = {"LastName": "Smith", "Email": "example@example.com"}
     mock_salesforce_server.post(
         requests_mock.ANY,
         [
-            {'status_code': 401, 'text': 'session expired'},
-            {'status_code': 404, 'text': 'not found'},
-        ]
+            {"status_code": 401, "text": "session expired"},
+            {"status_code": 404, "text": "not found"},
+        ],
     )
 
     with pytest.raises(SalesforceResourceNotFound):

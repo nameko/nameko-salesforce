@@ -46,9 +46,7 @@ class MethodProxy(object):
         self.pool = pool
         self.get_method_ref = get_method_ref
 
-    @retry(
-        max_attempts=None,
-        for_exceptions=simple_salesforce.SalesforceExpiredSession)
+    @retry(max_attempts=None, for_exceptions=simple_salesforce.SalesforceExpiredSession)
     def __call__(self, *args, **kwargs):
 
         with self.pool.get() as client:
@@ -57,7 +55,7 @@ class MethodProxy(object):
                 return method(*args, **kwargs)
             except (
                 simple_salesforce.SalesforceExpiredSession,
-                requests.exceptions.ConnectionError
+                requests.exceptions.ConnectionError,
             ):
                 self.pool.discard(client)
                 raise
@@ -81,7 +79,6 @@ class ClientAttributeProxy(MethodProxy):
         super().__init__(*args)
 
     def __getattr__(self, name):
-
         def get_method_ref(client):
             attr = getattr(client, self.attr_name)
             return getattr(attr, name)
@@ -104,13 +101,10 @@ class ClientProxy(object):
         self.pool = pool
 
     def __getattr__(self, name):
-
         def get_method_ref(client):
             return getattr(client, name)
 
-        return ClientAttributeProxy(
-            name, self.pool, get_method_ref
-        )
+        return ClientAttributeProxy(name, self.pool, get_method_ref)
 
 
 class ClientPool(object):
@@ -122,8 +116,7 @@ class ClientPool(object):
     """
 
     def __init__(
-        self, username, password, security_token,
-        sandbox=False, api_version=None
+        self, username, password, security_token, sandbox=False, api_version=None
     ):
         self.username = username
         self.password = password
@@ -154,13 +147,11 @@ class ClientPool(object):
         session = requests.Session()
         retry_adapter = requests.adapters.HTTPAdapter(
             max_retries=Retry(
-                connect=CONNECT_RETRIES,
-                read=READ_RETRIES,
-                redirect=REDIRECT_RETRIES
+                connect=CONNECT_RETRIES, read=READ_RETRIES, redirect=REDIRECT_RETRIES
             )
         )
-        session.mount('http://', retry_adapter)
-        session.mount('https://', retry_adapter)
+        session.mount("http://", retry_adapter)
+        session.mount("https://", retry_adapter)
 
         client = simple_salesforce.Salesforce(
             username=self.username,
@@ -168,7 +159,7 @@ class ClientPool(object):
             security_token=self.security_token,
             sandbox=self.sandbox,
             version=self.api_version,
-            session=session
+            session=session,
         )
         return client
 

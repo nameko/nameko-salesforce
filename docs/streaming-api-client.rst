@@ -98,7 +98,7 @@ There are more options available for defining Push Topics:
             notify_for_operation_delete=False)
         def handle_contact_updates(self, name, notification):
             """ Handle Salesforce contacts name changes
-            
+
             Handles only first and last name changes of existing contacts.
             Ignores any other modification.
 
@@ -145,7 +145,7 @@ Declaring notification of Salesforce object changes:
         @handle_sobject_notification('Contact')
         def handle_contact_updates(
             self, sobject_type, record_type, notification
-        ):  
+        ):
             """ Handle Salesforce contacts updates
             """
 
@@ -189,10 +189,10 @@ The following example shows available notification options:
             self, sobject_type, record_type, notification
         ):
             """ Handle Salesforce student contacts name changes
-            
+
             Handles only name changes of existing contacts of type of student.
             Ignores any other modification.
-            
+
             Also ignores changes done by this service (more precisely changes
             done by the same API user as this extension use for connection
             to Salesforce streaming API).
