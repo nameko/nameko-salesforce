@@ -1,10 +1,10 @@
-test: flake8 pylint pytest
+test: static pylint pytest
 
-flake8:
-	flake8 nameko_salesforce tests
+static:
+	pre-commit run --all-files
 
 pylint:
-	pylint nameko_salesforce -E
+	pylint nameko_salesforce --disable=R,C,W0221
 
 pytest:
 	coverage run --concurrency=eventlet --source nameko_salesforce --branch -m pytest tests
