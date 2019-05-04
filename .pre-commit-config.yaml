@@ -18,3 +18,11 @@ repos:
   rev: 19.3b0
   hooks:
   - id: black
+- repo: local
+  hooks:
+  - id: pylint
+    name: pylint
+    entry: python -m pylint.__main__ --disable=R,C,W0221
+    language: system
+    files: ^nameko_salesforce/
+    types: [python]

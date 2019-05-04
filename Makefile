@@ -1,10 +1,7 @@
-test: static pylint pytest
+test: static pytest
 
 static:
 	pre-commit run --all-files
-
-pylint:
-	pylint nameko_salesforce --disable=R,C,W0221
 
 pytest:
 	coverage run --concurrency=eventlet --source nameko_salesforce --branch -m pytest tests
